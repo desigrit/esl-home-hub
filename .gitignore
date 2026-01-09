@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+config.json
+logs.json
+esl_hub_backup_*.tar.gz

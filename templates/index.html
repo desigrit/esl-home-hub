@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark"> <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESL Hub</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        /* Custom Tweaks on top of Bootstrap Dark Mode */
+        body { background-color: #0d1117; font-family: 'Segoe UI', sans-serif; padding-bottom: 100px; }
+        .card { border: 1px solid #30363d; margin-bottom: 20px; }
+        .card-header { background-color: #161b22; border-bottom: 1px solid #30363d; font-weight: 600; }
+        .badge-gateway { font-family: monospace; font-size: 0.9em; }
+        
+        /* Log Styling */
+        .log-list { font-size: 0.85rem; color: #8b949e; margin-top: 15px; border-top: 1px solid #30363d; padding-top: 10px; }
+        .log-item { display: flex; justify-content: space-between; margin-bottom: 4px; font-family: monospace; }
+
+        /* Scheduler Box */
+        .scheduler-box { background: #161b22; padding: 15px; border-radius: 6px; border: 1px solid #30363d; }
+        .mode-selector .btn-check:checked + .btn-outline-secondary { background-color: #1f6feb; color: white; border-color: #1f6feb; }
+        
+        /* Tab Navigation Visibility */
+        .nav-tabs .nav-link { color: #8b949e; }
+        .nav-tabs .nav-link.active { color: #f0f6fc; background-color: #161b22; border-color: #30363d #30363d #161b22; }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🎛️ ESL Hub</h2>
+        <span class="badge bg-secondary badge-gateway">Gateway: {{ config.system.gateway_ip }}</span>
+    </div>
+
+    <form action="/update" method="POST">
+        <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="dota-tab" data-bs-toggle="tab" data-bs-target="#dota" type="button" role="tab">Dota 2</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button" role="tab">Weather</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="fitness-tab" data-bs-toggle="tab" data-bs-target="#fitness" type="button" role="tab">Fitness</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button" role="tab">Energy</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab">System</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            
+            {% macro scheduler_ui(key) %}
+            <div class="scheduler-box">
+                <label class="form-label text-primary small text-uppercase fw-bold mb-3">Update Schedule</label>
+                
+                <div class="btn-group w-100 mb-3 mode-selector" role="group">
+                    <input type="radio" class="btn-check" name="{{key}}_mode" id="{{key}}_mode_interval" value="interval" autocomplete="off" 
+                           {% if config[key].mode == 'interval' %}checked{% endif %} onclick="toggleMode('{{key}}', 'interval')">
+                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_interval">⏱ Interval</label>
+
+                    <input type="radio" class="btn-check" name="{{key}}_mode" id="{{key}}_mode_schedule" value="schedule" autocomplete="off"
+                           {% if config[key].mode == 'schedule' %}checked{% endif %} onclick="toggleMode('{{key}}', 'schedule')">
+                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_schedule">📅 Calendar</label>
+                </div>
+
+                <div id="{{key}}-interval-view" class="{% if config[key].mode != 'interval' %}d-none{% endif %}">
+                    <div class="input-group">
+                        <span class="input-group-text">Every</span>
+                        <input type="number" class="form-control" name="{{key}}_interval" value="{{ config[key].interval }}" min="1">
+                        <span class="input-group-text">minutes</span>
+                    </div>
+                </div>
+
+                <div id="{{key}}-schedule-view" class="{% if config[key].mode != 'schedule' %}d-none{% endif %}">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Every</span>
+                        <input type="number" class="form-control" name="{{key}}_days" value="{{ config[key].days }}" min="1">
+                        <span class="input-group-text">days</span>
+                    </div>
+                    <label class="small text-muted mb-1">At these times:</label>
+                    <div id="{{key}}-time-list">
+                        {% for time in config[key].times %}
+                        <div class="input-group mb-2">
+                            <input type="time" class="form-control" name="{{key}}_times[]" value="{{ time }}">
+                            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" onclick="addTime('{{key}}')">+ Add Time</button>
+                </div>
+            </div>
+            {% endmacro %}
+
+            <div class="tab-pane fade show active" id="dota" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Road to Immortal</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="dota_enabled" {% if config.dota.enabled %}checked{% endif %}>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Steam ID</label>
+                                    <input type="text" class="form-control" name="dota_steam_id" value="{{ config.dota.steam_id }}">
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6"><label class="form-label">Base MMR</label><input type="number" class="form-control" name="dota_baseline_mmr" value="{{ config.dota.baseline_mmr }}"></div>
+                                    <div class="col-6"><label class="form-label">Target MMR</label><input type="number" class="form-control" name="dota_target_mmr" value="{{ config.dota.target_mmr }}"></div>
+                                </div>
+                                <div class="mt-3"><label class="form-label">Match ID (Baseline)</label><input type="text" class="form-control" name="dota_baseline_match_id" value="{{ config.dota.baseline_match_id }}"></div>
+                            </div>
+                            <div class="col-md-4">{{ scheduler_ui('dota') }}</div>
+                        </div>
+                        <hr>
+                        <a href="/trigger/dota" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <div class="log-list"><strong>Log:</strong> {% for l in logs.dota %}<div class="log-item"><span>Updated:</span><span>{{ l }}</span></div>{% endfor %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="weather" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Weather</span>
+                        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="weather_enabled" {% if config.weather.enabled %}checked{% endif %}></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="mb-3">Monitored Locations</h5>
+                                <ul class="list-group mb-3">
+                                    {% for city, coords in config.weather.locations.items() %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ city }}
+                                            <span class="badge bg-secondary rounded-pill">{{ coords.lat }}, {{ coords.lon }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="alert alert-info border-info small">
+                                    ℹ️ To add or remove cities, please edit <code>config.json</code> directly via SSH.
+                                </div>
+                            </div>
+                            <div class="col-md-4">{{ scheduler_ui('weather') }}</div>
+                        </div>
+                        <hr>
+                        <a href="/trigger/weather" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <div class="log-list"><strong>Log:</strong> {% for l in logs.weather %}<div class="log-item"><span>Updated:</span><span>{{ l }}</span></div>{% endfor %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="fitness" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Fitness</span>
+                        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="fit_enabled" {% if config.fitness.enabled %}checked{% endif %}></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label class="form-label">Refresh Token</label>
+                                <input type="text" class="form-control mb-3" name="fit_refresh_token" value="{{ config.fitness.refresh_token }}">
+                                <div class="row g-2">
+                                    <div class="col-6"><label>Client ID</label><input type="text" class="form-control" name="fit_client_id" value="{{ config.fitness.client_id }}"></div>
+                                    <div class="col-6"><label>Client Secret</label><input type="password" class="form-control" name="fit_client_secret" value="{{ config.fitness.client_secret }}"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">{{ scheduler_ui('fitness') }}</div>
+                        </div>
+                        <hr>
+                        <a href="/trigger/fitness" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <div class="log-list"><strong>Log:</strong> {% for l in logs.fitness %}<div class="log-item"><span>Updated:</span><span>{{ l }}</span></div>{% endfor %}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="energy" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Energy</span>
+                        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="energy_enabled" {% if config.energy.enabled %}checked{% endif %}></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label class="form-label">Auth Key</label>
+                                <input type="password" class="form-control mb-3" name="energy_auth_key" value="{{ config.energy.auth_key }}">
+                                <div class="row g-2">
+                                    <div class="col-6"><label>Device ID</label><input type="text" class="form-control" name="energy_device_id" value="{{ config.energy.device_id }}"></div>
+                                    <div class="col-6"><label>Cost ($)</label><input type="number" step="0.01" class="form-control" name="energy_cost" value="{{ config.energy.cost_per_kwh }}"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">{{ scheduler_ui('energy') }}</div>
+                        </div>
+                        <hr>
+                        <a href="/trigger/energy" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <div class="log-list"><strong>Log:</strong> {% for l in logs.energy %}<div class="log-item"><span>Updated:</span><span>{{ l }}</span></div>{% endfor %}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="system" role="tabpanel">
+                 <div class="card">
+                    <div class="card-header">System</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Gateway IP</label><input type="text" class="form-control" name="sys_gateway_ip" value="{{ config.system.gateway_ip }}"></div>
+                            <div class="col-md-6"><label>Store Code</label><input type="text" class="form-control" name="sys_store_code" value="{{ config.system.store_code }}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <div class="fixed-bottom p-3 text-end" style="background: #0d1117; border-top: 1px solid #30363d;">
+            <button type="submit" class="btn btn-primary btn-lg">💾 Save Configuration</button>
+        </div>
+    </form>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+    // Logic for toggling Scheduler UI
+    function toggleMode(key, mode) {
+        document.getElementById(key + '-interval-view').classList.toggle('d-none', mode !== 'interval');
+        document.getElementById(key + '-schedule-view').classList.toggle('d-none', mode !== 'schedule');
+    }
+
+    function addTime(key) {
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+            <input type="time" class="form-control" name="${key}_times[]" value="08:00">
+            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">×</button>
+        `;
+        document.getElementById(key + '-time-list').appendChild(div);
+    }
+
+    // Logic for Persistent Tabs
+    document.addEventListener("DOMContentLoaded", function(){
+        var activeTab = localStorage.getItem('activeTab');
+        if (activeTab) {
+            var tabTrigger = document.querySelector(`button[data-bs-target="${activeTab}"]`);
+            if (tabTrigger) {
+                var tab = new bootstrap.Tab(tabTrigger);
+                tab.show();
+            }
+        }
+        var tabElsd = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabElsd.forEach(function(tabEl) {
+            tabEl.addEventListener('shown.bs.tab', function (event) {
+                localStorage.setItem('activeTab', event.target.getAttribute('data-bs-target'));
+            });
+        });
+    });
+</script>
+</body>
+</html>
