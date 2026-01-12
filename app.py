@@ -3,6 +3,9 @@ import os
 import time
 import threading
 import datetime
+import io
+import contextlib
+import sys
 from flask import Flask, render_template, request, redirect, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -42,31 +45,75 @@ def load_logs():
     if not os.path.exists(LOG_FILE): 
         return {"dota": [], "weather": [], "fitness": [], "energy": []}
     try:
-        with open(LOG_FILE, 'r') as f: return json.load(f)
+        with open(LOG_FILE, 'r') as f: 
+            logs = json.load(f)
+            # Migration: If old logs are strings, convert them to dicts
+            for k in logs:
+                for i, entry in enumerate(logs[k]):
+                    if isinstance(entry, str):
+                        logs[k][i] = {"time": entry, "status": "Legacy", "output": "No details available."}
+            return logs
     except:
         return {"dota": [], "weather": [], "fitness": [], "energy": []}
 
-def log_success(job_name):
+def log_run(job_name, status, output):
     logs = load_logs()
     if job_name not in logs: logs[job_name] = []
+    
     timestamp = datetime.datetime.now().strftime("%I:%M %p, %b %d")
-    logs[job_name].insert(0, timestamp)
-    logs[job_name] = logs[job_name][:5]
+    
+    entry = {
+        "time": timestamp,
+        "status": status,
+        "output": output
+    }
+    
+    logs[job_name].insert(0, entry)
+    logs[job_name] = logs[job_name][:10] # Keep last 10 runs
+    
     with open(LOG_FILE, 'w') as f: json.dump(logs, f, indent=2)
 
 # --- JOB WRAPPERS ---
 def run_job(name, func, force=False):
     cfg = load_config()
     
-    # LOGIC UPDATE: Run if Forced OR Enabled
     if force or cfg.get(name, {}).get('enabled'):
         trigger_type = "Manual" if force else "Scheduled"
-        print(f"⏰ {trigger_type} Job: {name.capitalize()}")
+        
+        # Capture Stdout/Stderr
+        capture_buffer = io.StringIO()
+        status = "Success"
+        
+        # Redirect prints to buffer AND original terminal
+        class Tee(object):
+            def __init__(self, *files): self.files = files
+            def write(self, obj):
+                for f in self.files: f.write(obj)
+            def flush(self):
+                for f in self.files: f.flush()
+
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        
         try:
-            func.run(cfg)
-            log_success(name)
-        except Exception as e:
-            print(f"❌ {name.capitalize()} Job Failed: {e}")
+            # Send output to both capture buffer and real terminal
+            sys.stdout = Tee(sys.stdout, capture_buffer)
+            sys.stderr = Tee(sys.stderr, capture_buffer)
+            
+            print(f"⏰ {trigger_type} Job: {name.capitalize()}")
+            try:
+                func.run(cfg)
+            except Exception as e:
+                status = "Failed"
+                print(f"❌ {name.capitalize()} Job Failed: {e}")
+                
+        finally:
+            # Restore stdout/stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            
+        log_run(name, status, capture_buffer.getvalue())
+        
     else:
         # Scheduled run but disabled
         pass
@@ -87,9 +134,6 @@ def reschedule_all():
 
     for name, controller in job_map.items():
         settings = cfg.get(name, {})
-        
-        # Even if disabled, we schedule it (so the toggle works instantly if flipped later),
-        # but run_job will check 'enabled' before executing.
         
         # MODE 1: INTERVAL
         if settings.get('mode') == 'interval':
@@ -171,12 +215,10 @@ def update_settings():
 
 @app.route('/trigger/<job_name>')
 def trigger_job(job_name):
-    # Manual trigger: force=True
     jobs = {'dota': dota_controller, 'weather': weather_controller, 
             'fitness': strava_controller, 'energy': energy_controller}
     
     if job_name in jobs:
-        # Pass True for force
         threading.Thread(target=run_job, args=(job_name, jobs[job_name], True)).start()
         
     return redirect(url_for('index'))
