@@ -127,6 +127,21 @@ def run(full_config):
                     last_xfit['hr_peak'] = f"{int(act.get('max_heartrate',0))} bpm"
         except: continue
 
+    # --- 3.5 HIGHLIGHT TODAY ---
+    # Find the grid index for today's date
+    today_idx = start_day_index + (now.day - 1)
+    print(f"DEBUG: Start Index: {start_day_index}, Today Index: {today_idx}")
+    
+    if 0 <= today_idx < 35:
+        current_val = grid[today_idx]
+        # Map normal states to "Bold" states
+        # 1->4, 2->5, 3->6
+        bold_map = {"1": "4", "2": "5", "3": "6"}
+        
+        if current_val in bold_map:
+            grid[today_idx] = bold_map[current_val]
+            print(f"✨ Highlighting Today (Idx {today_idx}) as State {grid[today_idx]}")
+
     # 4. PUSH PAYLOAD
     run_width = int((min(run_count, TARGET_WORKOUTS) / TARGET_WORKOUTS) * MAX_BAR_WIDTH)
     xfit_width = int((min(xfit_count, TARGET_WORKOUTS) / TARGET_WORKOUTS) * MAX_BAR_WIDTH)
