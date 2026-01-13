@@ -44,9 +44,11 @@ def run(full_config):
     def get_weather(lat, lon):
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=temperature_2m_max,temperature_2m_min&temperature_unit=celsius&forecast_days=2&timeformat=unixtime&timezone=auto"
         try:
-            r = requests.get(url)
+            r = requests.get(url, timeout=10) # Added timeout to prevent hanging
+            r.raise_for_status() # Raises error if status code is 400/500
             return r.json()
-        except:
+        except Exception as e:
+            print(f"⚠️ API Fetch Failed for {lat},{lon}: {e}") # <--- THIS IS KEY
             return None
 
     # 3. FETCH DATA
