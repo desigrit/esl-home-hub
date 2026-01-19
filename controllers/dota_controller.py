@@ -134,7 +134,7 @@ def run(full_config):
     pr_data[223] = r_7  
     pr_data[224] = l_30 
     pr_data[225] = r_30
-    pr_data[226] = datetime.datetime.now().strftime("Last updated: %I:%M %p") 
+    pr_data[226] = datetime.datetime.now().strftime("Last updated: %b %-d, %-I:%M %p") 
 
     unique_task_id = str(int(time.time()))
     payload = {

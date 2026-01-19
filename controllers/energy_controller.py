@@ -116,7 +116,7 @@ def run(full_config):
     pr_data[92] = marker_right
 
     # Timestamp (New feature we want to keep)
-    pr_data[93] = now.strftime("Last updated: %I:%M %p")
+    pr_data[93] = datetime.datetime.now().strftime("Last updated: %b %-d, %-I:%M %p")
 
     # Graph Bars (Restored Fixed Scaling)
     for i, entry in enumerate(graph_slice):

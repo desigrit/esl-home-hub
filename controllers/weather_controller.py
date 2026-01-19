@@ -69,7 +69,7 @@ def run(full_config):
     data[10] = f"{int(curr['temperature_2m'])}°"
     data[11] = DESC_MAP.get(curr['weather_code'], "")
     data[12] = f"{int(daily['temperature_2m_min'][0])}° , {int(daily['temperature_2m_max'][0])}°"
-    data[13] = datetime.datetime.now().strftime("Last updated: %#I:%M %p")
+    data[13] = datetime.datetime.now().strftime("Last updated: %b %-d, %-I:%M %p")
     data[14] = ICON_MAP.get(curr['weather_code'], "PARTLYCLOUDY")
 
     # HOURLY

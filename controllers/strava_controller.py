@@ -155,7 +155,7 @@ def run(full_config):
     pr_data[142] = last_xfit['hr_peak']
     pr_data[143] = last_run['hr_avg']
     pr_data[144] = last_run['hr_peak']
-    pr_data[145] = datetime.datetime.now().strftime("Last updated: %I:%M %p")
+    pr_data[145] = datetime.datetime.now().strftime("Last updated: %b %-d, %-I:%M %p")
 
     unique_task_id = str(int(time.time()))
     payload = {
