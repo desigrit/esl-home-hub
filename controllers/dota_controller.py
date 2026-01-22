@@ -1,6 +1,25 @@
+"""
+PROJECT: ESL Hub
+MODULE: Dota 2 Controller
+AUTHOR: Raunak Oberoi
+DATE: Jan 2026
+
+DESCRIPTION:
+Tracks Dota 2 MMR progress and Win Rates.
+Displays a main progress bar (MMR) and 3 "Split Bars" for recent performance.
+
+KEY FEATURES:
+- Calculates MMR gain/loss relative to a 'Baseline Match ID'.
+- Split Bar Logic: 
+  - <50% Win Rate = Red Bar growing Left (Negative)
+  - >50% Win Rate = Black Bar growing Right (Positive)
+"""
+
 import requests
 import datetime
 import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 def run(full_config):
     # 1. READ CONFIG
@@ -21,20 +40,37 @@ def run(full_config):
     TAG_ID = cfg['tag_id']
     LAYOUT_ID = "4p20c_Dota"
 
+    # --- NETWORK HELPER: RETRY SESSION ---
+    def get_retry_session(retries=3, backoff_factor=60, status_forcelist=(500, 502, 503, 504, 429)):
+        session = requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist,
+            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
+
     # 2. HELPER FUNCTIONS
     def get_hero_dict():
         try:
-            r = requests.get("https://api.opendota.com/api/heroes")
+            r = get_retry_session().get("https://api.opendota.com/api/heroes", timeout=20)
             if r.status_code == 200:
                 return {h['id']: h['localized_name'] for h in r.json()}
-        except: return {}
+        except Exception as e:
+            print(f"⚠️ Hero Fetch Warning: {e}")
         return {}
 
     def fetch_matches():
         print(f"⚔️ Fetching Dota 2 Matches for {STEAM_ID}...")
-        url = f"https://api.opendota.com/api/players/{STEAM_ID}/matches?limit=100&lobby_type=7"
+        url = f"https://api.opendota.com/api/players/{STEAM_ID}/matches?limit=100&lobby_type=7" # Lobby 7 = Ranked
         try:
-            r = requests.get(url)
+            r = get_retry_session().get(url, timeout=20)
             if r.status_code == 200:
                 return r.json()
             print(f"❌ API Error: {r.text}")
@@ -63,6 +99,7 @@ def run(full_config):
         match_id = m['match_id']
         match_dt = datetime.datetime.fromtimestamp(m['start_time'])
         
+        # MMR Calculation: Assume +/- 25 per ranked game since baseline
         if match_id > START_MATCH_ID:
             mmr_delta += 25 if is_win else -25
             
@@ -97,29 +134,34 @@ def run(full_config):
     kda = f"{last['kills']}-{last['deaths']}-{last['assists']}"
     last_match_str = f"{hero_name} ({kda}) - {res}"
 
-    # --- BARS ---
+    # --- VISUAL BAR CALCULATIONS ---
+    # 1. Main MMR Bar (Progress to Immortal)
     bracket_base = 4620
     bracket_top = 5650
     bracket_range = bracket_top - bracket_base
     prog_raw = (current_mmr - bracket_base) / bracket_range
     main_bar_w = int(max(0, min(1, prog_raw)) * MAIN_BAR_PIXEL_WIDTH)
     
+    # 2. Split Bars (Win Rate)
+    # Returns (Left Width, Right Width). Only ONE is active at a time.
     def get_split_widths(pct):
         diff = pct - 50 
         ratio = abs(diff) / 50.0 
         width = int(ratio * SPLIT_BAR_SIDE_WIDTH)
-        if diff < 0: return str(width), "0"
-        else:        return "0", str(width)
+        if diff < 0: return str(width), "0"  # Left (Red) Active
+        else:        return "0", str(width)  # Right (Black) Active
 
     l_20, r_20 = get_split_widths(pct_20)
     l_7,  r_7  = get_split_widths(pct_7)
     l_30, r_30 = get_split_widths(pct_30)
 
-    # --- PAYLOAD ---
+    # --- DATA MAPPING (LAYOUT DESIGNER) ---
     pr_data = [""] * 250
     pr_data[200] = "Divine IV"     
     pr_data[201] = str(current_mmr)
     pr_data[202] = wins_needed_str
+    
+    # Stats Text (Wins-Losses, Pct)
     pr_data[203] = w_20
     pr_data[204] = p_20
     pr_data[205] = w_7
@@ -127,14 +169,24 @@ def run(full_config):
     pr_data[207] = w_30
     pr_data[208] = p_30
     pr_data[209] = last_match_str
-    pr_data[210] = str(main_bar_w)
+    pr_data[210] = str(main_bar_w) # Main Bar Width
+    
+    # SPLIT BAR WIDTHS (Layout Condition scripts must match these!)
+    # PR_220/222/224 = Left Width (Red Bar) -> Script: OBJ.XS = MID - Width
+    # PR_221/223/225 = Right Width (Black Bar) -> Script: OBJ.XS = MID
     pr_data[220] = l_20 
     pr_data[221] = r_20 
     pr_data[222] = l_7  
     pr_data[223] = r_7  
     pr_data[224] = l_30 
     pr_data[225] = r_30
-    pr_data[226] = datetime.datetime.now().strftime("Last updated: %b %-d, %-I:%M %p") 
+    
+    # Timestamp
+    if now.minute == 0:
+        time_str = now.strftime("%b %-d, %-I %p")      
+    else:
+        time_str = now.strftime("%b %-d, %-I:%M %p")   
+    pr_data[226] = f"Last updated: {time_str}" 
 
     unique_task_id = str(int(time.time()))
     payload = {
@@ -149,7 +201,7 @@ def run(full_config):
     }
     
     try:
-        requests.post(f"http://{GATEWAY_IP}/api/product", json=payload)
+        get_retry_session().post(f"http://{GATEWAY_IP}/api/product", json=payload, timeout=20)
         print(f"🚀 Dota Tag Updated! MMR: {pr_data[201]}")
     except Exception as e:
         print(f"❌ Gateway Error: {e}")
