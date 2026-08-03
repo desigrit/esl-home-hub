@@ -1,8 +1,21 @@
-![ESL Hub tags on the wall](https://github.com/user-attachments/assets/ac6768f4-3a76-4984-afa0-34c49547267f)
-
 # ESL Hub
 
 Retail electronic shelf labels, repurposed as always-on household dashboards.
+
+Walk down any supermarket aisle and the price tickets on the shelf edge are not
+card any more. They are electronic shelf labels: a small e-paper display, a
+radio, a coin cell, and a gateway in the back office pushing prices to thousands
+of them at once. Retail buys them by the pallet, which makes them cheap on the
+second-hand market and very good at the one thing a wall dashboard actually
+needs, which is holding a page of information for months without being plugged
+into anything.
+
+They are also a nicer object than a tablet. No glow, no notifications, no black
+rectangle when it sleeps. A tag that has not changed since this morning looks
+exactly like a printed card, because that is what it was designed to imitate.
+
+So this project takes that hardware and points it at something other than the
+price of oranges.
 
 A Flask app on a Raspberry Pi pulls from external APIs on a schedule and pushes
 rendered payloads to a set of Rainus InforTab e-paper tags. The tags refresh a
@@ -10,6 +23,8 @@ few times a day, draw no power between refreshes, need no wires, and stay
 readable in daylight.
 
 ## What is on the wall
+
+![ESL Hub tags on the wall](https://github.com/user-attachments/assets/ac6768f4-3a76-4984-afa0-34c49547267f)
 
 | Dashboard | Pulls from | Layout |
 |---|---|---|
@@ -79,40 +94,7 @@ and the manual trigger map. Add a settings tab in `templates/index.html` and a
 matching `process_tab` call if it needs one.
 
 The array must be at least as long as the highest index you write. Controllers
-here range from 100 to 300 entries depending on which block of PR numbers their
-layout uses.
-
-## The layout side
-
-Layouts are authored in the vendor's Layout Designer and stored on the gateway,
-so they are versioned nowhere. Worth knowing:
-
-- The canvas for a 4.20 inch tag is **400 x 300 px**.
-- A text, image or barcode object either shows static content or binds to a
-  **PR Info ID**. That ID is the index into the `prInfo` array the controller
-  sends.
-- PR numbers are scoped to a layout, not globally. Two layouts can both use
-  index 100 without interfering, because each tag carries its own array.
-- Any object can be made conditional through **Edit Condition**, which uses a
-  small symbol language rather than raw code:
-
-```python
-if PR_162 == '1':
-    FILLED_COLOR = RED
-    LINE_COLOR = RED
-elif PR_162 == '2':
-    FILLED_COLOR = BLACK
-    LINE_COLOR = BLACK
-else:
-    HIDE = TRUE
-```
-
-  The designer compiles that into a `pr_info[...]` / `properties[...]` form and
-  stores both. Author the symbol version, never the compiled one.
-
-- `OBJ.YS` and `OBJ.HEIGHT` are settable the same way, so a layout can be made
-  responsive. The family calendar uses this to move its divider and reflow its
-  upcoming rows depending on how busy today is.
+here range from 100 to 300 entries.
 
 ## Setup
 
