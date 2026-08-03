@@ -10,7 +10,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # Import your controllers
-from controllers import dota_controller, weather_controller, strava_controller, energy_controller, f1_controller
+from controllers import dota_controller, weather_controller, strava_controller, energy_controller, f1_controller, family_controller
 
 app = Flask(__name__)
 CONFIG_FILE = 'config.json'
@@ -24,6 +24,7 @@ def load_config():
         "fitness": {"enabled": False, "mode": "interval", "interval": 60, "times": ["22:00"], "days": 1},
         "energy":  {"enabled": False, "mode": "interval", "interval": 60, "times": ["08:00"], "days": 3},
         "f1":      {"enabled": False, "mode": "interval", "interval": 1440, "times": ["12:00"], "days": 1},
+        "family":  {"enabled": False, "mode": "schedule", "interval": 60, "times": ["05:00", "12:00", "18:00"], "days": 1},
         "system":  {"gateway_ip": "192.168.220.206", "store_code": ""}
     }
     
@@ -44,7 +45,7 @@ def save_config(data):
 
 def load_logs():
     if not os.path.exists(LOG_FILE): 
-        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": []}
+        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": [], "family": []}
     try:
         with open(LOG_FILE, 'r') as f: 
             logs = json.load(f)
@@ -55,7 +56,7 @@ def load_logs():
                         logs[k][i] = {"time": entry, "status": "Legacy", "output": "No details available."}
             return logs
     except:
-        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": []}
+        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": [], "family": []}
 
 def log_run(job_name, status, output):
     logs = load_logs()
@@ -129,7 +130,8 @@ def reschedule_all():
         'weather': weather_controller,
         'fitness': strava_controller,
         'energy': energy_controller,
-        'f1': f1_controller
+        'f1': f1_controller,
+        'family': family_controller
     }
 
     print("🔄 Rescheduling Jobs...")
@@ -219,7 +221,8 @@ def update_settings():
 @app.route('/trigger/<job_name>')
 def trigger_job(job_name):
     jobs = {'dota': dota_controller, 'weather': weather_controller, 
-            'fitness': strava_controller, 'energy': energy_controller, 'f1': f1_controller}
+            'fitness': strava_controller, 'energy': energy_controller, 'f1': f1_controller,
+            'family': family_controller}
     
     if job_name in jobs:
         threading.Thread(target=run_job, args=(job_name, jobs[job_name], True)).start()

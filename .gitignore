@@ -8,3 +8,7 @@ esl_hub_backup_*.tar.gz
 *.log
 controllers/data/
 controllers/test_data.json
+
+# Local safety backups (may contain credentials)
+*.bak-*
+*.bak
