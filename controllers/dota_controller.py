@@ -10,9 +10,8 @@ Displays a main progress bar (MMR) and 3 "Split Bars" for recent performance.
 
 KEY FEATURES:
 - Calculates MMR gain/loss relative to a 'Baseline Match ID'.
-- Split Bar Logic: 
-  - <50% Win Rate = Red Bar growing Left (Negative)
-  - >50% Win Rate = Black Bar growing Right (Positive)
+- [UPDATED] Zoomed Sensitivity: Split bars now max out at +/- 20% deviation.
+  This makes small win rate changes (e.g., 52%) much more visible.
 """
 
 import requests
@@ -34,6 +33,11 @@ def run(full_config):
     # Layout & Pixel Config
     MAIN_BAR_PIXEL_WIDTH = int(cfg.get('main_bar_width', 300))
     SPLIT_BAR_SIDE_WIDTH = int(cfg.get('split_bar_width', 98))
+    
+    # [NEW] SENSITIVITY CONFIG
+    # 20 means the bar fills up completely if winrate is +/- 20% from 50%
+    # (i.e., Winrate > 70% is Full Black, Winrate < 30% is Full Red)
+    SENSITIVITY = 20.0 
     
     GATEWAY_IP = sys['gateway_ip']
     STORE_CODE = sys['store_code']
@@ -117,10 +121,12 @@ def run(full_config):
     wins_needed_str = f"+{wins_needed}"
     
     def get_stat_str(match_list):
-        if not match_list: return "0-0", "0%", 0
+        # Return None for the int value if list is empty
+        if not match_list: return "0-0", "0%", None 
         wins = sum(1 for x in match_list if x['is_win'])
         losses = len(match_list) - wins
-        if len(match_list) == 0: return "0-0", "0%", 0
+        if len(match_list) == 0: return "0-0", "0%", None
+        
         win_pct = int((wins / len(match_list)) * 100)
         return f"{wins}-{losses}", f"{win_pct}%", win_pct
 
@@ -136,18 +142,27 @@ def run(full_config):
 
     # --- VISUAL BAR CALCULATIONS ---
     # 1. Main MMR Bar (Progress to Immortal)
-    bracket_base = 4620
-    bracket_top = 5650
+    bracket_base = 5622
+    bracket_top = 6600
     bracket_range = bracket_top - bracket_base
     prog_raw = (current_mmr - bracket_base) / bracket_range
     main_bar_w = int(max(0, min(1, prog_raw)) * MAIN_BAR_PIXEL_WIDTH)
     
-    # 2. Split Bars (Win Rate)
-    # Returns (Left Width, Right Width). Only ONE is active at a time.
+    # 2. Split Bars (Win Rate) - ZOOMED LOGIC
     def get_split_widths(pct):
+        if pct is None: return "0", "0"
+        
         diff = pct - 50 
-        ratio = abs(diff) / 50.0 
+        
+        # Logic: Calculate ratio against SENSITIVITY instead of 50
+        # Example: 55% Winrate -> Diff 5. Ratio = 5/20 = 0.25 (25% bar width)
+        ratio = abs(diff) / SENSITIVITY
+        
+        # Clamp ratio to 1.0 (100%) so we don't overflow pixels
+        ratio = min(1.0, ratio)
+        
         width = int(ratio * SPLIT_BAR_SIDE_WIDTH)
+        
         if diff < 0: return str(width), "0"  # Left (Red) Active
         else:        return "0", str(width)  # Right (Black) Active
 
@@ -157,7 +172,7 @@ def run(full_config):
 
     # --- DATA MAPPING (LAYOUT DESIGNER) ---
     pr_data = [""] * 250
-    pr_data[200] = "Divine IV"     
+    pr_data[200] = "Immortal"     
     pr_data[201] = str(current_mmr)
     pr_data[202] = wins_needed_str
     
@@ -171,9 +186,7 @@ def run(full_config):
     pr_data[209] = last_match_str
     pr_data[210] = str(main_bar_w) # Main Bar Width
     
-    # SPLIT BAR WIDTHS (Layout Condition scripts must match these!)
-    # PR_220/222/224 = Left Width (Red Bar) -> Script: OBJ.XS = MID - Width
-    # PR_221/223/225 = Right Width (Black Bar) -> Script: OBJ.XS = MID
+    # SPLIT BAR WIDTHS
     pr_data[220] = l_20 
     pr_data[221] = r_20 
     pr_data[222] = l_7  

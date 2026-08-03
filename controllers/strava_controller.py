@@ -29,7 +29,7 @@ from urllib3.util.retry import Retry
 # These control the visual scaling of the progress bars.
 CONFIG_FILE = 'config.json'
 TARGET_WORKOUTS = 14     # Goal: 14 workouts/month = 100% bar width
-MAX_BAR_WIDTH = 100      # Pixel width of the progress bar on the layout
+MAX_BAR_WIDTH = 147      # Pixel width of the progress bar on the layout
 
 def run(full_config):
     # 1. LOAD CONFIGURATION
@@ -45,7 +45,7 @@ def run(full_config):
     GATEWAY_IP = sys['gateway_ip']
     STORE_CODE = sys['store_code']
     TAG_ID = cfg['tag_id']
-    LAYOUT_ID = "4p20c_NORMAL"  # Must match the Layout ID in Rainus Web UI
+    LAYOUT_ID = "4p20c_Fitness"  # Must match the Layout ID in Rainus Web UI
 
     # --- NETWORK HELPER: RETRY SESSION ---
     # Creates a request session that automatically retries failed connections.
@@ -225,6 +225,7 @@ def run(full_config):
     else:
         time_str = now.strftime("%b %-d, %-I:%M %p")   
     pr_data[145] = f"Last updated: {time_str}"
+    pr_data[146] = now.strftime("%B")
 
     unique_task_id = str(int(time.time()))
     payload = {

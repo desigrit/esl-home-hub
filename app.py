@@ -10,7 +10,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # Import your controllers
-from controllers import dota_controller, weather_controller, strava_controller, energy_controller
+from controllers import dota_controller, weather_controller, strava_controller, energy_controller, f1_controller
 
 app = Flask(__name__)
 CONFIG_FILE = 'config.json'
@@ -23,6 +23,7 @@ def load_config():
         "weather": {"enabled": False, "mode": "interval", "interval": 30, "times": ["10:00", "14:00"], "days": 1},
         "fitness": {"enabled": False, "mode": "interval", "interval": 60, "times": ["22:00"], "days": 1},
         "energy":  {"enabled": False, "mode": "interval", "interval": 60, "times": ["08:00"], "days": 3},
+        "f1":      {"enabled": False, "mode": "interval", "interval": 1440, "times": ["12:00"], "days": 1},
         "system":  {"gateway_ip": "192.168.220.206", "store_code": ""}
     }
     
@@ -43,7 +44,7 @@ def save_config(data):
 
 def load_logs():
     if not os.path.exists(LOG_FILE): 
-        return {"dota": [], "weather": [], "fitness": [], "energy": []}
+        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": []}
     try:
         with open(LOG_FILE, 'r') as f: 
             logs = json.load(f)
@@ -54,7 +55,7 @@ def load_logs():
                         logs[k][i] = {"time": entry, "status": "Legacy", "output": "No details available."}
             return logs
     except:
-        return {"dota": [], "weather": [], "fitness": [], "energy": []}
+        return {"dota": [], "weather": [], "fitness": [], "energy": [], "f1": []}
 
 def log_run(job_name, status, output):
     logs = load_logs()
@@ -127,7 +128,8 @@ def reschedule_all():
         'dota': dota_controller,
         'weather': weather_controller,
         'fitness': strava_controller,
-        'energy': energy_controller
+        'energy': energy_controller,
+        'f1': f1_controller
     }
 
     print("🔄 Rescheduling Jobs...")
@@ -192,6 +194,7 @@ def update_settings():
     process_tab('weather')
     process_tab('fitness')
     process_tab('energy')
+    process_tab('f1')
 
     config['system']['gateway_ip'] = form.get('sys_gateway_ip')
     config['system']['store_code'] = form.get('sys_store_code')
@@ -216,7 +219,7 @@ def update_settings():
 @app.route('/trigger/<job_name>')
 def trigger_job(job_name):
     jobs = {'dota': dota_controller, 'weather': weather_controller, 
-            'fitness': strava_controller, 'energy': energy_controller}
+            'fitness': strava_controller, 'energy': energy_controller, 'f1': f1_controller}
     
     if job_name in jobs:
         threading.Thread(target=run_job, args=(job_name, jobs[job_name], True)).start()
