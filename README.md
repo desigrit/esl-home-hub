@@ -10,6 +10,8 @@ second-hand market and very good at the one thing a wall dashboard actually
 needs, which is holding a page of information for months without being plugged
 into anything.
 
+![Electronic shelf labels doing their day job on a grocery shelf](docs/shelf-tags.jpg)
+
 They are also a nicer object than a tablet. No glow, no notifications, no black
 rectangle when it sleeps. A tag that has not changed since this morning looks
 exactly like a printed card, because that is what it was designed to imitate.
