@@ -186,6 +186,12 @@ def update_settings():
     form = request.form
     
     def process_tab(key):
+        # A settings form rendered before this job's tab existed carries none of
+        # its fields. Without this guard such a save would read the checkbox as
+        # absent, set enabled to False and blank the schedule, silently stopping
+        # a live job. Every tab's scheduler always posts a mode radio.
+        if f'{key}_mode' not in form:
+            return
         config[key]['enabled'] = f'{key}_enabled' in form
         config[key]['mode'] = form.get(f'{key}_mode', 'interval')
         config[key]['interval'] = int(form.get(f'{key}_interval', 30))
@@ -197,22 +203,29 @@ def update_settings():
     process_tab('fitness')
     process_tab('energy')
     process_tab('f1')
+    process_tab('family')
 
-    config['system']['gateway_ip'] = form.get('sys_gateway_ip')
-    config['system']['store_code'] = form.get('sys_store_code')
+    if 'sys_gateway_ip' in form:
+        config['system']['gateway_ip'] = form.get('sys_gateway_ip')
+        config['system']['store_code'] = form.get('sys_store_code')
     
-    config['dota']['steam_id'] = form.get('dota_steam_id')
-    config['dota']['baseline_mmr'] = int(form.get('dota_baseline_mmr') or 0)
-    config['dota']['target_mmr'] = int(form.get('dota_target_mmr') or 0)
-    config['dota']['baseline_match_id'] = int(form.get('dota_baseline_match_id') or 0)
+    # Same guard as above. These were unconditional, so a form that did not carry
+    # them nulled real credentials, including Strava's rotating refresh token.
+    if 'dota_steam_id' in form:
+        config['dota']['steam_id'] = form.get('dota_steam_id')
+        config['dota']['baseline_mmr'] = int(form.get('dota_baseline_mmr') or 0)
+        config['dota']['target_mmr'] = int(form.get('dota_target_mmr') or 0)
+        config['dota']['baseline_match_id'] = int(form.get('dota_baseline_match_id') or 0)
 
-    config['fitness']['client_id'] = form.get('fit_client_id')
-    config['fitness']['client_secret'] = form.get('fit_client_secret')
-    config['fitness']['refresh_token'] = form.get('fit_refresh_token')
+    if 'fit_client_id' in form:
+        config['fitness']['client_id'] = form.get('fit_client_id')
+        config['fitness']['client_secret'] = form.get('fit_client_secret')
+        config['fitness']['refresh_token'] = form.get('fit_refresh_token')
 
-    config['energy']['auth_key'] = form.get('energy_auth_key')
-    config['energy']['device_id'] = form.get('energy_device_id')
-    config['energy']['cost_per_kwh'] = float(form.get('energy_cost') or 0)
+    if 'energy_auth_key' in form:
+        config['energy']['auth_key'] = form.get('energy_auth_key')
+        config['energy']['device_id'] = form.get('energy_device_id')
+        config['energy']['cost_per_kwh'] = float(form.get('energy_cost') or 0)
 
     save_config(config)
     reschedule_all()

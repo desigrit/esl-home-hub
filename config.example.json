@@ -1,0 +1,86 @@
+{
+  "system": {
+    "gateway_ip": "192.168.0.10",
+    "store_code": "2000"
+  },
+  "weather": {
+    "enabled": false,
+    "tag_id": "TAG_WEATHER",
+    "locations": {},
+    "mode": "schedule",
+    "interval": 30,
+    "times": ["09:00"],
+    "days": 1
+  },
+  "fitness": {
+    "enabled": false,
+    "tag_id": "TAG_FITNESS",
+    "client_id": "YOUR_STRAVA_CLIENT_ID",
+    "client_secret": "YOUR_STRAVA_CLIENT_SECRET",
+    "refresh_token": "YOUR_STRAVA_REFRESH_TOKEN",
+    "mode": "schedule",
+    "interval": 60,
+    "times": ["08:00", "22:00"],
+    "days": 1
+  },
+  "energy": {
+    "enabled": false,
+    "tag_id": "TAG_ENERGY",
+    "shelly_url": "https://shelly-XX-eu.shelly.cloud",
+    "auth_key": "YOUR_SHELLY_AUTH_KEY",
+    "device_id": "YOUR_SHELLY_DEVICE_ID",
+    "cost_per_kwh": 0.12,
+    "graph_height": 16,
+    "mode": "schedule",
+    "interval": 60,
+    "times": ["08:00"],
+    "days": 1
+  },
+  "dota": {
+    "enabled": false,
+    "tag_id": "TAG_DOTA",
+    "steam_id": "YOUR_STEAM_ID_32",
+    "baseline_mmr": 0,
+    "baseline_match_id": 0,
+    "target_mmr": 0,
+    "main_bar_width": 300,
+    "split_bar_width": 98,
+    "mode": "schedule",
+    "interval": 15,
+    "times": ["08:00"],
+    "days": 1
+  },
+  "f1": {
+    "enabled": false,
+    "tag_id": "TAG_F1",
+    "mode": "schedule",
+    "interval": 1440,
+    "times": ["23:00"],
+    "days": 7
+  },
+  "WebScraper": {
+    "enabled": false,
+    "tag_id": "TAG_SCRAPER",
+    "azure_user": "azureuser",
+    "azure_ip": "0.0.0.0",
+    "ssh_key_path": "/home/youruser/.ssh/your_key.pem",
+    "remote_path": "/home/azureuser/output.json",
+    "mode": "schedule",
+    "interval": 180,
+    "times": ["06:05"],
+    "days": 1
+  },
+  "family": {
+    "enabled": false,
+    "tag_id": "TAG_CALENDAR",
+    "service_account_file": "controllers/data/google_service_account.json",
+    "calendar_ids": ["yourcalendar@group.calendar.google.com"],
+    "timezone": "America/Los_Angeles",
+    "upcoming_days": 120,
+    "collapse_repeats": false,
+    "mode": "schedule",
+    "interval": 60,
+    "times": ["06:00"],
+    "days": 1
+  }
+}

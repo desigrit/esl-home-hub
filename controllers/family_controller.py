@@ -34,6 +34,7 @@ CLI helpers, run from the esl_hub directory:
 import datetime
 import json
 import os
+import re
 import sys
 import time
 
@@ -64,6 +65,15 @@ MAX_TODAY = len(TODAY_SLOTS)
 MAX_UPCOMING = len(UPCOMING_SLOTS)
 
 _token_cache = {}
+
+# Anything raised on the run path is captured into logs.json and rendered on the
+# dashboard, which has no authentication. Calendar ids and service account
+# addresses are both email shaped, so scrub them out of any error text.
+_EMAILISH = re.compile(r"[\w.+-]+(?:@|%40)[\w.-]+\.[A-Za-z]{2,}")
+
+
+def _redact(text):
+    return _EMAILISH.sub("<redacted>", str(text))
 
 
 # --------------------------------------------------------------------------
@@ -115,18 +125,22 @@ def _access_token(key):
         data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
               "assertion": assertion})
     if r.status_code != 200:
-        raise RuntimeError(f"Google token request failed {r.status_code}: {r.text[:300]}")
+        raise RuntimeError(f"Google token request failed {r.status_code}: "
+                           f"{_redact(r.text[:300])}")
     body = r.json()
     _token_cache[email] = {"token": body["access_token"],
                            "expires_at": now + int(body.get("expires_in", 3600))}
     return body["access_token"]
 
 
-def _get(token, path, params=None):
+def _get(token, path, params=None, label=None):
     r = _session().get(f"{CALENDAR_API}{path}", timeout=20, params=params or {},
                        headers={"Authorization": f"Bearer {token}"})
     if r.status_code != 200:
-        raise RuntimeError(f"Calendar API {path} failed {r.status_code}: {r.text[:300]}")
+        # label, not path: the path carries the calendar id, url encoded so a
+        # plain email match would not catch it.
+        raise RuntimeError(f"Calendar API {label or _redact(path)} failed "
+                           f"{r.status_code}: {_redact(r.text[:300])}")
     return r.json()
 
 
@@ -157,7 +171,7 @@ def check_calendar(token, calendar_id):
     return meta, body.get("items", [])
 
 
-def fetch_events(token, calendar_id, time_min, time_max):
+def fetch_events(token, calendar_id, time_min, time_max, label=None):
     """singleEvents expands recurrences server-side, which is what makes yearly
     birthdays and anniversaries land on the right date without any RRULE work."""
     out, page = [], None
@@ -167,7 +181,7 @@ def fetch_events(token, calendar_id, time_min, time_max):
         if page:
             params["pageToken"] = page
         body = _get(token, f"/calendars/{requests.utils.quote(calendar_id, safe='')}/events",
-                    params)
+                    params, label=label or "events")
         out.extend(body.get("items", []))
         page = body.get("nextPageToken")
         if not page:
@@ -296,8 +310,9 @@ def collect(cfg):
     time_max = time_min + datetime.timedelta(days=int(cfg.get("upcoming_days", 120)))
 
     events, seen = [], set()
-    for cal_id in calendar_ids:
-        raw = fetch_events(token, cal_id, time_min, time_max)
+    for idx, cal_id in enumerate(calendar_ids, 1):
+        raw = fetch_events(token, cal_id, time_min, time_max,
+                           label=f"events for calendar {idx}")
         kept = 0
         for item in raw:
             ev = normalise(item, tz)
@@ -310,7 +325,9 @@ def collect(cfg):
             seen.add(fingerprint)
             events.append(ev)
             kept += 1
-        print(f"   {cal_id}: {kept} events")
+        # Deliberately not the calendar id: run output is teed into logs.json
+        # and rendered on the dashboard, which has no authentication.
+        print(f"   calendar {idx} of {len(calendar_ids)}: {kept} events")
 
     todays, upcoming = split_events(events, today)
     if cfg.get("collapse_repeats", False):
@@ -352,8 +369,9 @@ def run(full_config):
 
     r = _session().post(f"http://{gateway_ip}/api/product", json=payload, timeout=20)
     if r.status_code == 200:
-        headline = todays[0]["name"] if todays else "nothing on today"
-        print(f"✅ Family Calendar Tag Updated! ({headline})")
+        # Counts only, never event titles: this line ends up on the dashboard.
+        print(f"✅ Family Calendar Tag Updated! "
+              f"({len(todays)} today, {len(upcoming)} upcoming)")
     else:
         raise RuntimeError(f"Gateway Error {r.status_code}: {r.text[:300]}")
 

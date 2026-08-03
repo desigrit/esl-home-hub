@@ -54,6 +54,7 @@
             <li class="nav-item"><button class="nav-link" id="fitness-tab" data-bs-toggle="tab" data-bs-target="#fitness" type="button">Fitness</button></li>
             <li class="nav-item"><button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button">Energy</button></li>
             <li class="nav-item"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button">Formula 1</button></li>
+            <li class="nav-item"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button">Family Calendar</button></li>
             <li class="nav-item"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button">System</button></li>
         </ul>
 
@@ -254,6 +255,30 @@
                         <hr>
                         <a href="/trigger/f1" class="btn btn-success w-100">▶ Run Update Now</a>
                         {{ log_viewer('f1') }}
+                    </div>
+                </div>
+            </div>
+
+
+            {# --- FAMILY CALENDAR TAB --- #}
+            <div class="tab-pane fade" id="family" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Family Calendar</span>
+                        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="family_enabled" {% if config.family.enabled %}checked{% endif %}></div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="mb-3">Family Calendar Config</h5>
+                                <div class="alert alert-info border-info small mb-2">&#8505;&#65039; Events are read from Google Calendar with a service account. Each calendar must be shared with the service account address, with <em>See all event details</em>.</div>
+                                <div class="alert alert-secondary border-secondary small">&#128274; <strong>Tag ID, calendar IDs and key path:</strong> statically configured in <code>config.json</code>.</div>
+                            </div>
+                            <div class="col-md-4">{{ scheduler_ui('family') }}</div>
+                        </div>
+                        <hr>
+                        <a href="/trigger/family" class="btn btn-success w-100">&#9654; Run Update Now</a>
+                        {{ log_viewer('family') }}
                     </div>
                 </div>
             </div>
