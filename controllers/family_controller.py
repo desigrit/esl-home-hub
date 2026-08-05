@@ -268,16 +268,20 @@ def slot_key(ev):
 def collapse_recurring(events):
     """Fold a recurring series down to its next occurrence.
 
-    An occurrence still sitting where its series put it merges into one row. An
-    occurrence moved to another day or time keeps its own row, because a changed
-    occurrence is exactly the one worth noticing. One-off events never merge,
-    even if two share a title.
+    Only timed events fold. An all-day recurrence is a birthday, an anniversary
+    or a holiday, where each date is its own occasion: two of them back to back
+    are two things happening, not one thing repeating, so they each keep a row.
+
+    Among timed events, an occurrence still sitting where its series put it
+    merges into one row. An occurrence moved to another day or time keeps its
+    own row, because a changed occurrence is exactly the one worth noticing.
+    One-off events never merge, even if two share a title.
 
     Expects the list already sorted, so the first instance kept is the soonest.
     """
     out, seen = [], set()
     for ev in events:
-        if not ev.get("series") or ev.get("moved"):
+        if not ev.get("series") or ev.get("moved") or ev["all_day"]:
             out.append(ev)
             continue
         key = slot_key(ev)
@@ -321,14 +325,17 @@ def build_pr_data(todays, upcoming, now):
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     for ev, (pr_date, pr_name, pr_time) in zip(upcoming[:MAX_UPCOMING], UPCOMING_SLOTS):
-        # The marker prefixes the name. It must not go in the time field: the
-        # layout reads an empty time to mean all-day when it colours the row
-        # marker, so anything written there turns every all-day dot from red to
-        # black. Note the prefix costs about four characters of a field that
-        # already auto-shrinks, so a recurring name longer than roughly 26
-        # characters will start to truncate.
+        # The marker prefixes the name, and only on timed events: those are the
+        # rows that were folded, so it is the honest signal that later
+        # occurrences are hidden. All-day rows are never folded and a birthday
+        # announcing that it recurs says nothing. It must not go in the time
+        # field either, which the layout reads as empty to mean all-day when it
+        # colours the row marker. The prefix costs about four characters of a
+        # field that already auto-shrinks, so a recurring name longer than
+        # roughly 26 characters will start to truncate.
+        folded = bool(ev.get("series")) and not ev["all_day"]
         pr[pr_date] = fmt_date(ev["date"])
-        pr[pr_name] = ("(R) " if ev.get("series") else "") + ev["name"]
+        pr[pr_name] = ("(R) " if folded else "") + ev["name"]
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     return pr
