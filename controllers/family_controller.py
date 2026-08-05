@@ -200,13 +200,20 @@ def normalise(event, tz):
     if not name:
         return None
 
+    # Google sets recurringEventId on every expanded instance of a series and
+    # leaves it off one-off events, so it is the authoritative "same meeting"
+    # signal. Matching on the name alone would also fold together two unrelated
+    # events that happen to share a title.
+    series = event.get("recurringEventId")
+
     start = event.get("start") or {}
     if "date" in start:
         d = datetime.date.fromisoformat(start["date"])
-        return {"name": name, "date": d, "start": None, "all_day": True}
+        return {"name": name, "date": d, "start": None, "all_day": True, "series": series}
     if "dateTime" in start:
         dt = datetime.datetime.fromisoformat(start["dateTime"]).astimezone(tz)
-        return {"name": name, "date": dt.date(), "start": dt, "all_day": False}
+        return {"name": name, "date": dt.date(), "start": dt, "all_day": False,
+                "series": series}
     return None
 
 
@@ -243,20 +250,46 @@ def split_events(events, today):
     return todays, upcoming
 
 
-def collapse_repeats(events):
-    """Keep only the next occurrence of each distinct event name.
+def slot_key(ev):
+    """What makes two instances "the same meeting in the same slot"."""
+    when = "all-day" if ev["all_day"] else ev["start"].strftime("%H:%M")
+    return (ev["series"], ev["name"].strip().lower(), ev["date"].weekday(), when)
 
-    Off by default. Turn on with "collapse_repeats": true if a weekly recurrence
-    starts swamping the upcoming list. Assumes the list is already sorted, so the
-    first occurrence seen is the soonest."""
+
+def collapse_recurring(events):
+    """Fold a recurring series down to its next occurrence.
+
+    Instances merge only when they share a series id AND fall on the same weekday
+    at the same time. An instance that was moved to another day or shifted to
+    another time keeps its own row, because a changed occurrence is exactly the
+    one worth noticing. One-off events never merge, even if two share a title.
+
+    Expects the list already sorted, so the first instance kept is the soonest.
+    """
     out, seen = [], set()
     for ev in events:
-        key = ev["name"].strip().lower()
+        if not ev.get("series"):
+            out.append(ev)
+            continue
+        key = slot_key(ev)
         if key in seen:
             continue
         seen.add(key)
         out.append(ev)
     return out
+
+
+def organise(events, today, collapse=True):
+    """Split into today and upcoming, then fold recurring series.
+
+    run() and the tests both go through here so the tested path is the shipped
+    path; an earlier version of the tests rebuilt this inline and silently
+    skipped the folding step.
+    """
+    todays, upcoming = split_events(events, today)
+    if collapse:
+        upcoming = collapse_recurring(upcoming)
+    return todays, upcoming
 
 
 def layout_state(today_count):
@@ -279,7 +312,11 @@ def build_pr_data(todays, upcoming, now):
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     for ev, (pr_date, pr_name, pr_time) in zip(upcoming[:MAX_UPCOMING], UPCOMING_SLOTS):
-        pr[pr_date] = fmt_date(ev["date"])
+        # The marker rides on the date, not the name or the time. Names are
+        # unbounded user text that would truncate, and the layout reads an empty
+        # time field to mean all-day when it colours the row marker, so anything
+        # written there would turn every all-day dot from red to black.
+        pr[pr_date] = fmt_date(ev["date"]) + (" (R)" if ev.get("series") else "")
         pr[pr_name] = ev["name"]
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
@@ -329,12 +366,12 @@ def collect(cfg):
         # and rendered on the dashboard, which has no authentication.
         print(f"   calendar {idx} of {len(calendar_ids)}: {kept} events")
 
-    todays, upcoming = split_events(events, today)
-    if cfg.get("collapse_repeats", False):
-        before = len(upcoming)
-        upcoming = collapse_repeats(upcoming)
-        if before != len(upcoming):
-            print(f"   collapsed {before - len(upcoming)} repeat occurrence(s) in upcoming")
+    _, raw_upcoming = split_events(events, today)
+    todays, upcoming = organise(events, today,
+                                collapse=cfg.get("collapse_recurring", True))
+    folded = len(raw_upcoming) - len(upcoming)
+    if folded:
+        print(f"   folded {folded} later occurrence(s) of recurring events")
     return todays, upcoming, now
 
 
