@@ -207,13 +207,23 @@ def normalise(event, tz):
     series = event.get("recurringEventId")
 
     start = event.get("start") or {}
+
+    # originalStartTime rides along on every expanded instance, so an occurrence
+    # dragged to another day or time is exactly one where the two disagree.
+    # Comparing weekday and clock time instead misreads a yearly event, whose
+    # date holds still while the weekday drifts a day or two each year.
+    orig = event.get("originalStartTime") or {}
+    moved = bool(orig) and (
+        (start.get("dateTime") or start.get("date")) !=
+        (orig.get("dateTime") or orig.get("date")))
     if "date" in start:
         d = datetime.date.fromisoformat(start["date"])
-        return {"name": name, "date": d, "start": None, "all_day": True, "series": series}
+        return {"name": name, "date": d, "start": None, "all_day": True,
+                "series": series, "moved": moved}
     if "dateTime" in start:
         dt = datetime.datetime.fromisoformat(start["dateTime"]).astimezone(tz)
         return {"name": name, "date": dt.date(), "start": dt, "all_day": False,
-                "series": series}
+                "series": series, "moved": moved}
     return None
 
 
@@ -251,24 +261,23 @@ def split_events(events, today):
 
 
 def slot_key(ev):
-    """What makes two instances "the same meeting in the same slot"."""
-    when = "all-day" if ev["all_day"] else ev["start"].strftime("%H:%M")
-    return (ev["series"], ev["name"].strip().lower(), ev["date"].weekday(), when)
+    """What makes two instances "the same meeting keeping to its pattern"."""
+    return (ev["series"], ev["name"].strip().lower())
 
 
 def collapse_recurring(events):
     """Fold a recurring series down to its next occurrence.
 
-    Instances merge only when they share a series id AND fall on the same weekday
-    at the same time. An instance that was moved to another day or shifted to
-    another time keeps its own row, because a changed occurrence is exactly the
-    one worth noticing. One-off events never merge, even if two share a title.
+    An occurrence still sitting where its series put it merges into one row. An
+    occurrence moved to another day or time keeps its own row, because a changed
+    occurrence is exactly the one worth noticing. One-off events never merge,
+    even if two share a title.
 
     Expects the list already sorted, so the first instance kept is the soonest.
     """
     out, seen = [], set()
     for ev in events:
-        if not ev.get("series"):
+        if not ev.get("series") or ev.get("moved"):
             out.append(ev)
             continue
         key = slot_key(ev)
@@ -346,7 +355,7 @@ def collect(cfg):
             "service account can read.")
 
     time_min = datetime.datetime.combine(today, datetime.time.min, tzinfo=tz)
-    time_max = time_min + datetime.timedelta(days=int(cfg.get("upcoming_days", 120)))
+    time_max = time_min + datetime.timedelta(days=int(cfg.get("upcoming_days", 400)))
 
     events, seen = [], set()
     for idx, cal_id in enumerate(calendar_ids, 1):
