@@ -312,12 +312,14 @@ def build_pr_data(todays, upcoming, now):
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     for ev, (pr_date, pr_name, pr_time) in zip(upcoming[:MAX_UPCOMING], UPCOMING_SLOTS):
-        # The marker rides on the date, not the name or the time. Names are
-        # unbounded user text that would truncate, and the layout reads an empty
-        # time field to mean all-day when it colours the row marker, so anything
-        # written there would turn every all-day dot from red to black.
-        pr[pr_date] = fmt_date(ev["date"]) + (" (R)" if ev.get("series") else "")
-        pr[pr_name] = ev["name"]
+        # The marker prefixes the name. It must not go in the time field: the
+        # layout reads an empty time to mean all-day when it colours the row
+        # marker, so anything written there turns every all-day dot from red to
+        # black. Note the prefix costs about four characters of a field that
+        # already auto-shrinks, so a recurring name longer than roughly 26
+        # characters will start to truncate.
+        pr[pr_date] = fmt_date(ev["date"])
+        pr[pr_name] = ("(R) " if ev.get("series") else "") + ev["name"]
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     return pr
