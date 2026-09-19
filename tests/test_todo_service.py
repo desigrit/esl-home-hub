@@ -7,8 +7,6 @@ from unittest import mock
 import requests
 
 from todo_service import (
-    LIST_SELECT,
-    TASK_SELECT,
     MsalTokenProvider,
     MicrosoftTodoService,
     TodoConfigurationError,
@@ -25,14 +23,11 @@ TEST_CONFIG = {
     "task_concurrency": 2,
     "request_timeout_seconds": 15,
 }
-LISTS_URL = f"https://graph.microsoft.com/v1.0/me/todo/lists?$select={LIST_SELECT}"
+LISTS_URL = "https://graph.microsoft.com/v1.0/me/todo/lists"
 
 
 def tasks_url(list_id):
-    return (
-        f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks"
-        f"?$select={TASK_SELECT}"
-    )
+    return f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks"
 
 
 class FakeResponse:
@@ -77,7 +72,12 @@ class TodoServiceTests(unittest.TestCase):
                 "value": [{"id": "list/2", "displayName": "Home"}]
             },
             tasks_url("list-1"): {
-                "value": [{"id": "task-1", "title": "First"}],
+                "value": [{
+                    "id": "task-1",
+                    "title": "First",
+                    "body": {"content": "private note"},
+                    "linkedResources": [{"webUrl": "https://private.example"}],
+                }],
                 "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/todo/lists/list-1/tasks?$skiptoken=two",
             },
             "https://graph.microsoft.com/v1.0/me/todo/lists/list-1/tasks?$skiptoken=two": {
@@ -101,6 +101,8 @@ class TodoServiceTests(unittest.TestCase):
             [task["title"] for task in snapshot["lists"][0]["tasks"]],
             ["First", "Second"],
         )
+        self.assertNotIn("body", snapshot["lists"][0]["tasks"][0])
+        self.assertNotIn("linkedResources", snapshot["lists"][0]["tasks"][0])
         self.assertTrue(
             all(call[1]["Authorization"] == "Bearer test-token" for call in session.calls)
         )

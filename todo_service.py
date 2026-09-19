@@ -31,8 +31,6 @@ GRAPH_SCOPES = ["https://graph.microsoft.com/Tasks.Read"]
 PROJECT_ROOT = Path(__file__).resolve().parent
 MAX_COLLECTION_PAGES = 10_000
 MAX_INLINE_RETRY_DELAY_SECONDS = 5
-LIST_SELECT = "id,displayName,isShared"
-TASK_SELECT = "id,title,status,importance,dueDateTime,categories,recurrence"
 _LOCAL_CACHE_LOCK = threading.RLock()
 
 
@@ -320,7 +318,7 @@ class MicrosoftTodoService:
 
             access_token = self.token_provider.get_access_token()
             lists = self._get_collection(
-                f"{GRAPH_BASE_URL}me/todo/lists?$select={LIST_SELECT}", access_token
+                f"{GRAPH_BASE_URL}me/todo/lists", access_token
             )
 
             def with_tasks(task_list):
@@ -330,11 +328,26 @@ class MicrosoftTodoService:
                         "Microsoft Graph returned a task list without an ID."
                     )
                 tasks = self._get_collection(
-                    f"{GRAPH_BASE_URL}me/todo/lists/"
-                    f"{quote(str(list_id), safe='')}/tasks?$select={TASK_SELECT}",
+                    f"{GRAPH_BASE_URL}me/todo/lists/{quote(str(list_id), safe='')}/tasks",
                     access_token,
                 )
-                return {**task_list, "tasks": tasks}
+                return {
+                    "id": list_id,
+                    "displayName": task_list.get("displayName"),
+                    "isShared": bool(task_list.get("isShared")),
+                    "tasks": [
+                        {
+                            "id": task.get("id"),
+                            "title": task.get("title"),
+                            "status": task.get("status"),
+                            "importance": task.get("importance"),
+                            "dueDateTime": task.get("dueDateTime"),
+                            "categories": task.get("categories") or [],
+                            "recurrence": task.get("recurrence"),
+                        }
+                        for task in tasks
+                    ],
+                }
 
             if lists:
                 worker_count = min(self.config["task_concurrency"], len(lists))
