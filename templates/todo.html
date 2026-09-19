@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Microsoft To Do | ESL Hub</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --todo-bg: #0d1117;
+            --todo-surface: #161b22;
+            --todo-surface-raised: #1c232d;
+            --todo-border: #30363d;
+            --todo-border-soft: #21262d;
+            --todo-text: #f0f6fc;
+            --todo-muted: #9ba7b4;
+            --todo-blue: #58a6ff;
+            --todo-blue-strong: #1f6feb;
+            --todo-red: #ff7b72;
+            --todo-amber: #d29922;
+            --todo-green: #3fb950;
+        }
+
+        * { box-sizing: border-box; }
+        html { background: var(--todo-bg); }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: var(--todo-bg);
+            color: var(--todo-text);
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        }
+        ::selection { background: #1f6feb; color: #ffffff; }
+        * { scrollbar-color: #3d4652 var(--todo-bg); scrollbar-width: thin; }
+        a { text-underline-offset: 0.2em; }
+        a:focus-visible, button:focus-visible, summary:focus-visible {
+            outline: 3px solid rgba(88, 166, 255, 0.55);
+            outline-offset: 3px;
+        }
+
+        .todo-shell { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; }
+        .todo-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            color: var(--todo-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .back-link:hover { color: var(--todo-text); }
+        .back-link svg, .button-icon, .meta-icon { width: 18px; height: 18px; }
+        h1 { margin: 0; font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -0.03em; }
+        .todo-subtitle { max-width: 64ch; margin: 8px 0 0; color: var(--todo-muted); }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+        .refresh-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 9px 14px;
+            border: 1px solid var(--todo-border);
+            border-radius: 10px;
+            background: var(--todo-surface);
+            color: var(--todo-text);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .refresh-button:hover { border-color: #59636f; background: var(--todo-surface-raised); }
+        .refresh-button[aria-disabled="true"] { opacity: 0.72; pointer-events: none; }
+        .refresh-button.is-loading .button-icon { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .overview-bar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            margin-bottom: 28px;
+            border: 1px solid var(--todo-border);
+            border-radius: 14px;
+            background: var(--todo-surface);
+            overflow: hidden;
+        }
+        .overview-item { margin: 0; padding: 17px 20px; }
+        .overview-item + .overview-item { border-left: 1px solid var(--todo-border); }
+        .overview-item dt {
+            color: var(--todo-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .overview-item dd {
+            margin: 3px 0 0;
+            font-size: 1.45rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .overview-item.is-alert dd { color: var(--todo-red); }
+
+        .sync-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+            color: var(--todo-muted);
+            font-size: 0.86rem;
+        }
+        .sync-time { display: inline-flex; align-items: center; gap: 7px; }
+        .sync-row a { color: var(--todo-blue); }
+        .list-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .todo-list {
+            align-self: start;
+            border: 1px solid var(--todo-border);
+            border-radius: 14px;
+            background: var(--todo-surface);
+            overflow: hidden;
+        }
+        .list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 17px 18px;
+            border-bottom: 1px solid var(--todo-border);
+        }
+        .list-title-row { display: flex; align-items: center; min-width: 0; gap: 10px; }
+        .list-mark {
+            display: grid;
+            width: 30px;
+            height: 30px;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 9px;
+            background: rgba(31, 111, 235, 0.17);
+            color: var(--todo-blue);
+        }
+        .list-mark svg { width: 17px; height: 17px; }
+        .list-header h2 {
+            margin: 0;
+            overflow: hidden;
+            font-size: 1rem;
+            font-weight: 700;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .list-count {
+            flex: 0 0 auto;
+            min-width: 30px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--todo-surface-raised);
+            color: var(--todo-muted);
+            font-size: 0.78rem;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+        }
+        .task-list { margin: 0; padding: 0; list-style: none; }
+        .task-row {
+            display: grid;
+            grid-template-columns: 20px minmax(0, 1fr);
+            gap: 11px;
+            padding: 14px 18px;
+        }
+        .task-row + .task-row { border-top: 1px solid var(--todo-border-soft); }
+        .task-row:hover { background: rgba(240, 246, 252, 0.025); }
+        .task-state {
+            width: 16px;
+            height: 16px;
+            margin-top: 3px;
+            border: 1.5px solid #6e7681;
+            border-radius: 50%;
+        }
+        .task-state.is-complete {
+            position: relative;
+            border-color: #55715b;
+            background: #29432f;
+        }
+        .task-state.is-complete::after {
+            position: absolute;
+            width: 7px;
+            height: 4px;
+            top: 4px;
+            left: 3px;
+            border-bottom: 1.5px solid #8fd39b;
+            border-left: 1.5px solid #8fd39b;
+            content: "";
+            transform: rotate(-45deg);
+        }
+        .task-title { margin: 0; color: var(--todo-text); line-height: 1.42; overflow-wrap: anywhere; }
+        .task-title.is-complete { color: #7d8996; text-decoration: line-through; }
+        .task-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 6px; }
+        .task-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--todo-muted);
+            font-size: 0.78rem;
+        }
+        .task-meta-item.is-overdue { color: var(--todo-red); }
+        .task-meta-item.is-today { color: #e3b341; }
+        .task-meta-item.is-high { color: var(--todo-muted); font-weight: 600; }
+        .category-chip {
+            padding: 1px 7px;
+            border-radius: 999px;
+            background: #252d38;
+            color: #bac4cf;
+            font-size: 0.74rem;
+        }
+        .empty-list { margin: 0; padding: 22px 18px; color: var(--todo-muted); font-size: 0.9rem; }
+        .completed-group { border-top: 1px solid var(--todo-border); }
+        .completed-group summary {
+            padding: 12px 18px;
+            color: var(--todo-muted);
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            list-style-position: inside;
+        }
+        .completed-group[open] summary { border-bottom: 1px solid var(--todo-border-soft); }
+
+        .state-panel {
+            max-width: 720px;
+            margin: 64px auto 0;
+            padding: 32px;
+            border: 1px solid var(--todo-border);
+            border-radius: 14px;
+            background: var(--todo-surface);
+        }
+        .state-icon {
+            display: grid;
+            width: 44px;
+            height: 44px;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(31, 111, 235, 0.17);
+            color: var(--todo-blue);
+        }
+        .state-icon svg { width: 24px; height: 24px; }
+        .state-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .state-panel h2 { margin: 0; font-size: 1.45rem; letter-spacing: -0.02em; }
+        .state-panel p { max-width: 62ch; margin: 0; color: var(--todo-muted); line-height: 1.65; }
+        .command {
+            display: block;
+            margin-top: 22px;
+            padding: 12px 14px;
+            border: 1px solid var(--todo-border);
+            border-radius: 9px;
+            background: var(--todo-bg);
+            color: #c9d1d9;
+            font-family: Consolas, "Liberation Mono", monospace;
+            font-size: 0.88rem;
+            overflow-x: auto;
+        }
+        .state-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+        .state-actions a { color: var(--todo-blue); font-weight: 600; }
+
+        @media (max-width: 820px) {
+            .list-grid { grid-template-columns: 1fr; }
+            .todo-header { align-items: flex-start; flex-direction: column; }
+            .header-actions, .refresh-button { width: 100%; }
+            .refresh-button { justify-content: center; }
+        }
+        @media (max-width: 620px) {
+            .todo-shell { padding: 22px 14px 48px; }
+            .overview-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .overview-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--todo-border); }
+            .overview-item:nth-child(4) { border-top: 1px solid var(--todo-border); }
+            .sync-row { align-items: flex-start; flex-direction: column; }
+            .state-panel { margin-top: 36px; padding: 24px 20px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .refresh-button.is-loading .button-icon { animation: none; }
+        }
+    </style>
+</head>
+<body>
+<main class="todo-shell">
+    <header class="todo-header">
+        <div>
+            <a class="back-link" href="{{ url_for('index') }}">
+                <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/></svg>
+                ESL Hub
+            </a>
+            <h1>Microsoft To Do</h1>
+            <p class="todo-subtitle">Your lists and tasks, collected in one quiet view on the home dashboard.</p>
+        </div>
+        {% if state == 'ready' %}
+        <div class="header-actions">
+            <a class="refresh-button" id="refresh-tasks" href="{{ url_for('todo_page', refresh=1) }}">
+                <svg class="button-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11a8.1 8.1 0 00-15.5-2M4 4v5h5m-5 4a8.1 8.1 0 0015.5 2M20 20v-5h-5"/></svg>
+                <span>Refresh tasks</span>
+            </a>
+        </div>
+        {% endif %}
+    </header>
+
+    {% if state == 'ready' %}
+        <dl class="overview-bar" aria-label="Task summary">
+            <div class="overview-item"><dt>Active</dt><dd>{{ todo.active_count }}</dd></div>
+            <div class="overview-item"><dt>Due today</dt><dd>{{ todo.due_today_count }}</dd></div>
+            <div class="overview-item{% if todo.overdue_count %} is-alert{% endif %}"><dt>Overdue</dt><dd>{{ todo.overdue_count }}</dd></div>
+            <div class="overview-item"><dt>Lists</dt><dd>{{ todo.list_count }}</dd></div>
+        </dl>
+
+        <div class="sync-row">
+            <span class="sync-time">
+                <svg class="meta-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {% if todo.fetched_label %}Updated {{ todo.fetched_label }}{% else %}Updated recently{% endif %}
+            </span>
+            <a href="https://to-do.office.com/tasks/" target="_blank" rel="noopener noreferrer">Open Microsoft To Do</a>
+        </div>
+
+        {% if todo.lists %}
+        <div class="list-grid">
+            {% for list in todo.lists %}
+            <section class="todo-list" aria-labelledby="list-{{ loop.index }}">
+                <div class="list-header">
+                    <div class="list-title-row">
+                        <span class="list-mark">
+                            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                        </span>
+                        <h2 id="list-{{ loop.index }}">{{ list.name }}</h2>
+                    </div>
+                    <span class="list-count" aria-label="{{ list.active_tasks|length }} active tasks">{{ list.active_tasks|length }}</span>
+                </div>
+
+                {% if list.active_tasks %}
+                <ul class="task-list">
+                    {% for task in list.active_tasks %}
+                    <li class="task-row">
+                        <span class="task-state" aria-hidden="true"></span>
+                        <div>
+                            <p class="task-title">{{ task.title }}</p>
+                            {% if task.due_label or task.importance == 'high' or task.categories or task.has_recurrence %}
+                            <div class="task-meta">
+                                {% if task.due_label %}
+                                <time class="task-meta-item{% if task.due_tone %} is-{{ task.due_tone }}{% endif %}" datetime="{{ task.due_iso }}">
+                                    <svg class="meta-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3m8-3v3M3 9h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                                    {{ task.due_label }}
+                                </time>
+                                {% endif %}
+                                {% if task.importance == 'high' %}<span class="task-meta-item is-high">High priority</span>{% endif %}
+                                {% if task.has_recurrence %}<span class="task-meta-item">Repeats</span>{% endif %}
+                                {% for category in task.categories %}<span class="category-chip">{{ category }}</span>{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-list">Nothing left in this list.</p>
+                {% endif %}
+
+                {% if list.completed_tasks %}
+                <details class="completed-group">
+                    <summary>Completed ({{ list.completed_tasks|length }})</summary>
+                    <ul class="task-list">
+                        {% for task in list.completed_tasks %}
+                        <li class="task-row">
+                            <span class="task-state is-complete" aria-hidden="true"></span>
+                            <div><p class="task-title is-complete">{{ task.title }}</p></div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+                {% endif %}
+            </section>
+            {% endfor %}
+        </div>
+        {% else %}
+        <section class="state-panel">
+            <div class="state-heading">
+                <div class="state-icon">
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                </div>
+                <h2>No task lists yet</h2>
+            </div>
+            <p>Create a list in Microsoft To Do, then refresh this page.</p>
+        </section>
+        {% endif %}
+    {% else %}
+        <section class="state-panel" role="status">
+            <div class="state-heading">
+                <div class="state-icon">
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.5m0 3.5h.01M10.3 3.8L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/></svg>
+                </div>
+                <h2>{{ state_title }}</h2>
+            </div>
+            <p>{{ state_message }}</p>
+            {% if state == 'configuration_required' %}
+            <code class="command">nano /home/ronhub/esl_hub/config.json</code>
+            {% elif state == 'authentication_required' %}
+            <code class="command">cd /home/ronhub/esl_hub &amp;&amp; python3 todo_auth.py</code>
+            {% endif %}
+            <div class="state-actions">
+                <a href="{{ url_for('todo_page', refresh=1) }}">Try again</a>
+                <a href="{{ url_for('index') }}">Return to ESL Hub</a>
+            </div>
+        </section>
+    {% endif %}
+</main>
+
+<script>
+    const refreshButton = document.getElementById('refresh-tasks');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', function () {
+            refreshButton.classList.add('is-loading');
+            refreshButton.setAttribute('aria-disabled', 'true');
+            refreshButton.querySelector('span').textContent = 'Refreshing tasks';
+        });
+    }
+</script>
+</body>
+</html>

@@ -103,16 +103,55 @@ here range from 100 to 300 entries.
 ```bash
 git clone git@github.com:desigrit/esl-home-hub.git
 cd esl-home-hub
-pip install flask apscheduler requests "PyJWT[crypto]"
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
 cp config.example.json config.json   # then fill in your own values
-python3 app.py                       # dashboard on :5000
+python app.py                        # dashboard on :5000
 ```
 
 Python 3.9 or newer, for `zoneinfo`. `PyJWT` needs the `crypto` extra because the
 calendar controller signs its service account assertion with RS256.
 
-Run it under systemd in production. The unit runs `app.py` directly as a normal
-user with `Restart=always`.
+### Microsoft To Do access
+
+RonHub includes a read-only `/todo` page and a JSON endpoint at `/api/todo`.
+Both use the Microsoft Graph To Do API and the delegated `Tasks.Read` permission.
+
+1. Register an application in the Microsoft Entra admin center. For a personal
+   account, choose **Personal Microsoft accounts only**.
+2. Add the delegated Microsoft Graph permission `Tasks.Read`.
+3. In **Authentication > Advanced settings**, enable **Allow public client
+   flows**. Do not create a client secret.
+4. Add the Application client ID to the `todo` section of `config.json`.
+5. Install MSAL and run the device-code sign-in as the same Linux user that runs
+   the service:
+
+```bash
+sudo apt-get install python3-msal
+cd /home/ronhub/esl_hub
+python3 todo_auth.py
+sudo systemctl restart esl_hub
+```
+
+Open the URL printed by the command on any phone or computer, enter the code,
+and sign in to the Microsoft account that owns the tasks. The token cache is
+stored at `controllers/data/microsoft_todo_token_cache.json` with owner-only
+permissions and is ignored by git.
+
+The JSON endpoint follows every Microsoft Graph pagination link for both lists
+and tasks. It requires the `todo.api_key` value from `config.json` in an
+`X-API-Key` header and returns only the task fields used by RonHub. Notes and
+linked resources are not fetched or returned. The browser page calls the
+service internally and does not expose the key. Devices that can reach RonHub
+can view the browser page, so keep port 5000 on a trusted network or put an
+authenticated reverse proxy in front of it.
+
+Run it under systemd in production. If dependencies are installed in the
+virtual environment above, set `ExecStart` to the full path of
+`.venv/bin/python`. The existing Raspberry Pi deployment instead uses Debian's
+system packages and `/usr/bin/python3`. In either case, the unit runs `app.py`
+as a normal user with `Restart=always`.
 
 **Restart the service after editing any `.py`**, otherwise manual triggers in
 the dashboard keep running the old code.
