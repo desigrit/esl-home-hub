@@ -33,7 +33,13 @@ class TodoRouteTests(unittest.TestCase):
             .read_text(encoding="utf-8")
         )
         config["todo"]["api_key"] = "test-api-key"
+        self.config = config
         app_module.load_config = lambda: config
+        self.previous_save_config = app_module.save_config
+        self.previous_reschedule_all = app_module.reschedule_all
+        self.saved_configs = []
+        app_module.save_config = lambda value: self.saved_configs.append(value)
+        app_module.reschedule_all = lambda: None
         self.previous_service = app_module._todo_service
         self.previous_key = app_module._todo_service_key
         self.fake_service = FakeTodoService({
@@ -55,6 +61,8 @@ class TodoRouteTests(unittest.TestCase):
 
     def tearDown(self):
         app_module.load_config = self.previous_load_config
+        app_module.save_config = self.previous_save_config
+        app_module.reschedule_all = self.previous_reschedule_all
         app_module._todo_service = self.previous_service
         app_module._todo_service_key = self.previous_key
 
@@ -65,8 +73,36 @@ class TodoRouteTests(unittest.TestCase):
         self.assertIn(b'id="todo-tab"', response.data)
         self.assertIn(b'data-bs-target="#todo"', response.data)
         self.assertIn(b'id="todo-content"', response.data)
+        self.assertIn(b'name="todo_tag_id"', response.data)
+        self.assertIn(b'name="todo_layout_id"', response.data)
+        self.assertIn(b'name="todo_enabled"', response.data)
+        self.assertIn(b'name="todo_mode"', response.data)
         self.assertNotIn(b"Buy coffee", response.data)
         self.assertEqual(self.fake_service.force_values, [])
+
+    def test_update_saves_todo_display_settings_without_replacing_auth_config(self):
+        client_id = self.config["todo"]["client_id"]
+        api_key = self.config["todo"]["api_key"]
+
+        response = self.client.post("/update", data={
+            "todo_enabled": "on",
+            "todo_tag_id": "TAG_TODO",
+            "todo_layout_id": "4p20c_Todo_Custom",
+            "todo_mode": "schedule",
+            "todo_interval": "90",
+            "todo_days": "1",
+            "todo_times[]": ["06:30", "18:30"],
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(self.saved_configs), 1)
+        todo = self.saved_configs[0]["todo"]
+        self.assertTrue(todo["enabled"])
+        self.assertEqual(todo["tag_id"], "TAG_TODO")
+        self.assertEqual(todo["layout_id"], "4p20c_Todo_Custom")
+        self.assertEqual(todo["times"], ["06:30", "18:30"])
+        self.assertEqual(todo["client_id"], client_id)
+        self.assertEqual(todo["api_key"], api_key)
 
     def test_todo_page_redirects_to_the_dashboard_tab(self):
         response = self.client.get("/todo")

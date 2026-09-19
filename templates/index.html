@@ -47,7 +47,7 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>🎛️ ESL Hub</h2>
+        <h2>ESL Hub</h2>
         <span class="badge bg-secondary badge-gateway">Gateway: {{ config.system.gateway_ip }}</span>
     </div>
 
@@ -59,8 +59,8 @@
             <li class="nav-item" role="presentation"><button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button" role="tab" aria-controls="energy" aria-selected="false">Energy</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button" role="tab" aria-controls="f1" aria-selected="false">Formula 1</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab" aria-controls="family" aria-selected="false">Family Calendar</button></li>
-            <li class="nav-item" role="presentation"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="todo-tab" data-bs-toggle="tab" data-bs-target="#todo" type="button" role="tab" aria-controls="todo" aria-selected="false">To Do</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System</button></li>
         </ul>
 
         <div class="tab-content">
@@ -71,9 +71,9 @@
                 <label class="form-label text-primary small text-uppercase fw-bold mb-3">Update Schedule</label>
                 <div class="btn-group w-100 mb-3 mode-selector" role="group">
                     <input type="radio" class="btn-check" name="{{key}}_mode" id="{{key}}_mode_interval" value="interval" {% if config[key].mode == 'interval' %}checked{% endif %} onclick="toggleMode('{{key}}', 'interval')">
-                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_interval">⏱ Interval</label>
+                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_interval">Interval</label>
                     <input type="radio" class="btn-check" name="{{key}}_mode" id="{{key}}_mode_schedule" value="schedule" {% if config[key].mode == 'schedule' %}checked{% endif %} onclick="toggleMode('{{key}}', 'schedule')">
-                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_schedule">📅 Calendar</label>
+                    <label class="btn btn-sm btn-outline-secondary" for="{{key}}_mode_schedule">Calendar</label>
                 </div>
                 <div id="{{key}}-interval-view" class="{% if config[key].mode != 'interval' %}d-none{% endif %}">
                     <div class="input-group">
@@ -112,11 +112,11 @@
                         <div class="log-header" data-bs-toggle="collapse" data-bs-target="#log-{{key}}-{{loop.index}}">
                             <div>
                                 {% if l.status == 'Success' %}
-                                    <span class="status-success">✅ Success</span>
+                                    <span class="status-success">Success</span>
                                 {% elif l.status == 'Failed' %}
-                                    <span class="status-fail">❌ Failed</span>
+                                    <span class="status-fail">Failed</span>
                                 {% else %}
-                                    <span class="text-muted">⚪ {{ l.status }}</span>
+                                    <span class="text-muted">{{ l.status }}</span>
                                 {% endif %}
                                 <span class="ms-2 text-white">{{ l.time }}</span>
                             </div>
@@ -153,7 +153,7 @@
                             <div class="col-md-4">{{ scheduler_ui('dota') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/dota" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <a href="/trigger/dota" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('dota') }}
                     </div>
                 </div>
@@ -178,12 +178,12 @@
                                         </li>
                                     {% endfor %}
                                 </ul>
-                                <div class="alert alert-info border-info small">ℹ️ To add or remove cities, please edit <code>config.json</code> directly via SSH.</div>
+                                <div class="alert alert-info border-info small">To add or remove cities, please edit <code>config.json</code> directly via SSH.</div>
                             </div>
                             <div class="col-md-4">{{ scheduler_ui('weather') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/weather" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <a href="/trigger/weather" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('weather') }}
                     </div>
                 </div>
@@ -209,7 +209,7 @@
                             <div class="col-md-4">{{ scheduler_ui('fitness') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/fitness" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <a href="/trigger/fitness" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('fitness') }}
                     </div>
                 </div>
@@ -235,7 +235,7 @@
                             <div class="col-md-4">{{ scheduler_ui('energy') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/energy" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <a href="/trigger/energy" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('energy') }}
                     </div>
                 </div>
@@ -252,13 +252,13 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <h5 class="mb-3">F1 Dashboard Config</h5>
-                                <div class="alert alert-info border-info small mb-2">ℹ️ Track images must be uploaded to the Layout Designer to render correctly.</div>
-                                <div class="alert alert-secondary border-secondary small">🔒 <strong>Tag ID:</strong> Statically configured in <code>config.json</code>.</div>
+                                <div class="alert alert-info border-info small mb-2">Track images must be uploaded to the Layout Designer to render correctly.</div>
+                                <div class="alert alert-secondary border-secondary small"><strong>Tag ID:</strong> Statically configured in <code>config.json</code>.</div>
                             </div>
                             <div class="col-md-4">{{ scheduler_ui('f1') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/f1" class="btn btn-success w-100">▶ Run Update Now</a>
+                        <a href="/trigger/f1" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('f1') }}
                     </div>
                 </div>
@@ -276,13 +276,13 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <h5 class="mb-3">Family Calendar Config</h5>
-                                <div class="alert alert-info border-info small mb-2">&#8505;&#65039; Events are read from Google Calendar with a service account. Each calendar must be shared with the service account address, with <em>See all event details</em>.</div>
-                                <div class="alert alert-secondary border-secondary small">&#128274; <strong>Tag ID, calendar IDs and key path:</strong> statically configured in <code>config.json</code>.</div>
+                                <div class="alert alert-info border-info small mb-2">Events are read from Google Calendar with a service account. Each calendar must be shared with the service account address, with <em>See all event details</em>.</div>
+                                <div class="alert alert-secondary border-secondary small"><strong>Tag ID, calendar IDs and key path:</strong> statically configured in <code>config.json</code>.</div>
                             </div>
                             <div class="col-md-4">{{ scheduler_ui('family') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/family" class="btn btn-success w-100">&#9654; Run Update Now</a>
+                        <a href="/trigger/family" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('family') }}
                     </div>
                 </div>
@@ -304,6 +304,56 @@
 
             {# --- MICROSOFT TO DO TAB --- #}
             <div class="tab-pane fade" id="todo" role="tabpanel" aria-labelledby="todo-tab" tabindex="0">
+                <div class="card todo-display-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Microsoft To Do Display</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" name="todo_enabled" aria-label="Enable Microsoft To Do display updates" {% if config.todo.enabled %}checked{% endif %}>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="mb-3">Display Configuration</h5>
+                                <p class="text-muted small">The tag uses the same read-only Microsoft account connection as the task browser below.</p>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="todo_tag_id">Tag ID</label>
+                                        <input id="todo_tag_id" type="text" class="form-control" name="todo_tag_id" value="{{ config.todo.tag_id }}" placeholder="Add the new display ID" autocomplete="off">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="todo_layout_id">Layout ID</label>
+                                        <input id="todo_layout_id" type="text" class="form-control" name="todo_layout_id" value="{{ config.todo.layout_id }}" autocomplete="off">
+                                    </div>
+                                </div>
+                                {% if not config.todo.tag_id %}
+                                <div class="alert alert-warning border-warning small mt-3 mb-0" role="status">
+                                    Add the new tag ID, save the configuration, then run the first update.
+                                </div>
+                                {% else %}
+                                <div class="alert alert-secondary border-secondary small mt-3 mb-0">
+                                    The controller publishes eight list rows, six cross-list task rows, and six focused-list task rows for <code>{{ config.todo.layout_id }}</code>.
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mt-3 mt-md-0">{{ scheduler_ui('todo') }}</div>
+                        </div>
+                        <hr>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary w-100">Save Display Settings</button>
+                            </div>
+                            <div class="col-md-6">
+                                {% if config.todo.tag_id %}
+                                <a href="/trigger/todo" class="btn btn-success w-100">Run Update Now</a>
+                                {% else %}
+                                <span class="btn btn-secondary disabled w-100" aria-disabled="true">Add a tag ID before running</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {{ log_viewer('todo') }}
+                    </div>
+                </div>
                 <div
                     class="todo-tab-host"
                     id="todo-content"
@@ -322,7 +372,7 @@
 
         </div> 
         <div class="fixed-bottom p-3 text-end" id="configuration-actions" style="background: #0d1117; border-top: 1px solid #30363d;">
-            <button type="submit" class="btn btn-primary btn-lg">💾 Save Configuration</button>
+            <button type="submit" class="btn btn-primary btn-lg">Save Configuration</button>
         </div>
     </form>
 </div>

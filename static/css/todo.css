@@ -1,3 +1,7 @@
+.todo-display-card + .todo-tab-host .todo-shell {
+    padding-top: 4px;
+}
+
 .todo-shell {
     --todo-bg: #0d1117;
     --todo-surface: #161b22;

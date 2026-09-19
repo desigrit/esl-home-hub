@@ -118,6 +118,9 @@ calendar controller signs its service account assertion with RS256.
 RonHub includes a read-only **To Do** dashboard tab and a JSON endpoint at
 `/api/todo`. The `/todo` route opens the dashboard with that tab selected. Both
 use the Microsoft Graph To Do API and the delegated `Tasks.Read` permission.
+The same data service powers an optional `4p20c_Todo` shelf-label controller.
+Its schedule, tag ID, layout ID, manual trigger, and execution logs are managed
+from the To Do tab. The controller stays disabled until a tag ID is supplied.
 
 1. Register an application in the Microsoft Entra admin center. For a personal
    account, choose **Personal Microsoft accounts only**.
@@ -147,6 +150,24 @@ linked resources are not fetched or returned. The browser page calls the
 service internally and does not expose the key. Devices that can reach RonHub
 can view the browser page, so keep port 5000 on a trusted network or put an
 authenticated reverse proxy in front of it.
+
+### Microsoft To Do label contract
+
+The controller always sends a 250-entry `prInfo` array. The layout can choose
+between a compact list overview, a cross-list task queue, and a focused-list
+view without changing the Graph integration.
+
+| Registers | Content |
+|---|---|
+| `PR_150` to `PR_159` | Date, update time, totals, density state, and overflow |
+| `PR_160` to `PR_191` | Eight list rows: name, active count, first task, and tone |
+| `PR_192` to `PR_199` | Focused-list metadata, due counts, and empty state |
+| `PR_200` to `PR_223` | Six prioritized tasks from all lists |
+| `PR_224` to `PR_247` | Six tasks from the focused list |
+| `PR_248` to `PR_249` | Contract version and display mode |
+
+Task and list names are sent only to the Rainus gateway. Controller logs retain
+counts, not task content.
 
 Run it under systemd in production. If dependencies are installed in the
 virtual environment above, set `ExecStart` to the full path of

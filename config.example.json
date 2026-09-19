@@ -84,12 +84,23 @@
     "days": 1
   },
   "todo": {
+    "enabled": false,
+    "tag_id": "",
+    "layout_id": "4p20c_Todo",
     "client_id": "YOUR_MICROSOFT_APPLICATION_CLIENT_ID",
     "tenant_id": "consumers",
     "token_cache_path": "controllers/data/microsoft_todo_token_cache.json",
     "cache_seconds": 30,
     "task_concurrency": 4,
     "request_timeout_seconds": 15,
-    "api_key": "REPLACE_WITH_A_LONG_RANDOM_VALUE"
+    "api_key": "REPLACE_WITH_A_LONG_RANDOM_VALUE",
+    "max_lists": 8,
+    "max_tasks": 6,
+    "focus_list_index": 0,
+    "display_mode": "overview",
+    "mode": "schedule",
+    "interval": 60,
+    "times": ["06:00", "12:00", "18:00"],
+    "days": 1
   }
 }
