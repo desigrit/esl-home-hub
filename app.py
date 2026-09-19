@@ -220,40 +220,33 @@ def no_store_json(payload, status=200, retry_after=None):
 
 @app.after_request
 def protect_todo_responses(response):
-    if request.path in ('/todo', '/api/todo'):
+    if request.path == '/todo' or request.path.startswith('/todo/') or request.path == '/api/todo':
         response.headers['Cache-Control'] = 'no-store'
         response.headers['X-Content-Type-Options'] = 'nosniff'
     return response
 
 
-@app.route('/todo')
-def todo_page():
-    config = load_config()
-    force_refresh = request.args.get('refresh') == '1'
-
+def get_todo_render_context(config, *, force_refresh=False):
     try:
         snapshot = get_todo_service(config).get_snapshot(force=force_refresh)
-        return render_template(
-            'todo.html',
+        return (dict(
             state='ready',
             todo=build_todo_view(snapshot),
-        )
+        ), 200)
     except TodoConfigurationError as error:
-        return render_template(
-            'todo.html',
+        return (dict(
             state='configuration_required',
             state_title='Connect Microsoft To Do',
             state_message=str(error),
             todo=None,
-        )
+        ), 200)
     except TodoAuthenticationRequired as error:
-        return render_template(
-            'todo.html',
+        return (dict(
             state='authentication_required',
             state_title='Sign in to Microsoft',
             state_message=str(error),
             todo=None,
-        )
+        ), 200)
     except TodoGraphError as error:
         app.logger.warning(
             'Microsoft Graph request failed: status=%s code=%s request_id=%s',
@@ -261,22 +254,37 @@ def todo_page():
             error.code,
             error.request_id,
         )
-        return render_template(
-            'todo.html',
+        return (dict(
             state='upstream_error',
             state_title='Microsoft To Do is unavailable',
             state_message='RonHub could not load your tasks. Try again in a moment.',
             todo=None,
-        ), 502
+        ), 502)
     except Exception:
         app.logger.exception('Unexpected Microsoft To Do page failure')
-        return render_template(
-            'todo.html',
+        return (dict(
             state='upstream_error',
             state_title='Microsoft To Do is unavailable',
             state_message='RonHub could not load your tasks. Try again in a moment.',
             todo=None,
-        ), 502
+        ), 502)
+
+
+@app.route('/todo')
+def todo_page():
+    query = {'tab': 'todo'}
+    if request.args.get('refresh') == '1':
+        query['todo_refresh'] = '1'
+    return redirect(url_for('index', **query))
+
+
+@app.route('/todo/fragment')
+def todo_fragment():
+    context, status = get_todo_render_context(
+        load_config(),
+        force_refresh=request.args.get('refresh') == '1',
+    )
+    return render_template('_todo_panel.html', **context), status
 
 
 @app.route('/api/todo')

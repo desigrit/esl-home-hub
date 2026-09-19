@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+from pathlib import Path
 
 os.environ["ESL_HUB_DISABLE_SCHEDULER"] = "1"
 
@@ -10,8 +11,10 @@ import app as app_module
 class FakeTodoService:
     def __init__(self, snapshot):
         self.snapshot = snapshot
+        self.force_values = []
 
     def get_snapshot(self, *, force=False):
+        self.force_values.append(force)
         return self.snapshot
 
 
@@ -24,12 +27,16 @@ class TodoRouteTests(unittest.TestCase):
     def setUp(self):
         self.client = app_module.app.test_client()
         self.previous_load_config = app_module.load_config
-        config = self.previous_load_config()
+        config = json.loads(
+            Path(app_module.__file__)
+            .with_name("config.example.json")
+            .read_text(encoding="utf-8")
+        )
         config["todo"]["api_key"] = "test-api-key"
         app_module.load_config = lambda: config
         self.previous_service = app_module._todo_service
         self.previous_key = app_module._todo_service_key
-        app_module._todo_service = FakeTodoService({
+        self.fake_service = FakeTodoService({
             "fetchedAt": "2026-09-19T17:00:00Z",
             "lists": [{
                 "id": "list-1",
@@ -41,6 +48,7 @@ class TodoRouteTests(unittest.TestCase):
                 }],
             }],
         })
+        app_module._todo_service = self.fake_service
         app_module._todo_service_key = json.dumps(
             config["todo"], sort_keys=True
         )
@@ -50,13 +58,39 @@ class TodoRouteTests(unittest.TestCase):
         app_module._todo_service = self.previous_service
         app_module._todo_service_key = self.previous_key
 
-    def test_todo_page_renders_server_side(self):
+    def test_index_contains_a_lazy_todo_tab(self):
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'id="todo-tab"', response.data)
+        self.assertIn(b'data-bs-target="#todo"', response.data)
+        self.assertIn(b'id="todo-content"', response.data)
+        self.assertNotIn(b"Buy coffee", response.data)
+        self.assertEqual(self.fake_service.force_values, [])
+
+    def test_todo_page_redirects_to_the_dashboard_tab(self):
         response = self.client.get("/todo")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/?tab=todo"))
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+    def test_todo_fragment_renders_server_side(self):
+        response = self.client.get("/todo/fragment")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Microsoft To Do", response.data)
         self.assertIn(b"Buy coffee", response.data)
+        self.assertNotIn(b"<!DOCTYPE html>", response.data)
         self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(self.fake_service.force_values, [False])
+
+    def test_todo_fragment_forwards_force_refresh(self):
+        response = self.client.get("/todo/fragment?refresh=1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.fake_service.force_values, [True])
 
     def test_api_returns_the_snapshot(self):
         response = self.client.get(
@@ -84,7 +118,7 @@ class TodoRouteTests(unittest.TestCase):
     def test_page_hides_unexpected_service_failure(self):
         app_module._todo_service = FailingTodoService()
 
-        response = self.client.get("/todo")
+        response = self.client.get("/todo/fragment")
 
         self.assertEqual(response.status_code, 502)
         self.assertIn(b"Microsoft To Do is unavailable", response.data)

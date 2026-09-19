@@ -1,0 +1,121 @@
+<section class="todo-shell">
+    <header class="todo-header">
+        <div>
+            <h1>Microsoft To Do</h1>
+            <p class="todo-subtitle">Your lists and tasks, collected in one quiet view on the home dashboard.</p>
+        </div>
+        {% if state == 'ready' %}
+        <div class="header-actions">
+            <a class="refresh-button" data-todo-refresh href="{{ url_for('todo_page', refresh=1) }}">
+                <svg class="button-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11a8.1 8.1 0 00-15.5-2M4 4v5h5m-5 4a8.1 8.1 0 0015.5 2M20 20v-5h-5"/></svg>
+                <span>Refresh tasks</span>
+            </a>
+        </div>
+        {% endif %}
+    </header>
+
+    {% if state == 'ready' %}
+        <dl class="overview-bar" aria-label="Task summary">
+            <div class="overview-item"><dt>Active</dt><dd>{{ todo.active_count }}</dd></div>
+            <div class="overview-item"><dt>Due today</dt><dd>{{ todo.due_today_count }}</dd></div>
+            <div class="overview-item{% if todo.overdue_count %} is-alert{% endif %}"><dt>Overdue</dt><dd>{{ todo.overdue_count }}</dd></div>
+            <div class="overview-item"><dt>Lists</dt><dd>{{ todo.list_count }}</dd></div>
+        </dl>
+
+        <div class="sync-row">
+            <span class="sync-time">
+                <svg class="meta-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {% if todo.fetched_label %}Updated {{ todo.fetched_label }}{% else %}Updated recently{% endif %}
+            </span>
+            <a href="https://to-do.office.com/tasks/" target="_blank" rel="noopener noreferrer">Open Microsoft To Do</a>
+        </div>
+
+        {% if todo.lists %}
+        <div class="list-grid">
+            {% for list in todo.lists %}
+            <section class="todo-list" aria-labelledby="todo-list-{{ loop.index }}">
+                <div class="list-header">
+                    <div class="list-title-row">
+                        <span class="list-mark">
+                            <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                        </span>
+                        <h2 id="todo-list-{{ loop.index }}">{{ list.name }}</h2>
+                    </div>
+                    <span class="list-count" aria-label="{{ list.active_tasks|length }} active tasks">{{ list.active_tasks|length }}</span>
+                </div>
+
+                {% if list.active_tasks %}
+                <ul class="task-list">
+                    {% for task in list.active_tasks %}
+                    <li class="task-row">
+                        <span class="task-state" aria-hidden="true"></span>
+                        <div>
+                            <p class="task-title">{{ task.title }}</p>
+                            {% if task.due_label or task.importance == 'high' or task.categories or task.has_recurrence %}
+                            <div class="task-meta">
+                                {% if task.due_label %}
+                                <time class="task-meta-item{% if task.due_tone %} is-{{ task.due_tone }}{% endif %}" datetime="{{ task.due_iso }}">
+                                    <svg class="meta-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3m8-3v3M3 9h18M5 4h14a2 2 0 012 2v13a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/></svg>
+                                    {{ task.due_label }}
+                                </time>
+                                {% endif %}
+                                {% if task.importance == 'high' %}<span class="task-meta-item is-high">High priority</span>{% endif %}
+                                {% if task.has_recurrence %}<span class="task-meta-item">Repeats</span>{% endif %}
+                                {% for category in task.categories %}<span class="category-chip">{{ category }}</span>{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-list">Nothing left in this list.</p>
+                {% endif %}
+
+                {% if list.completed_tasks %}
+                <details class="completed-group">
+                    <summary>Completed ({{ list.completed_tasks|length }})</summary>
+                    <ul class="task-list">
+                        {% for task in list.completed_tasks %}
+                        <li class="task-row">
+                            <span class="task-state is-complete" aria-hidden="true"></span>
+                            <div><p class="task-title is-complete">{{ task.title }}</p></div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+                {% endif %}
+            </section>
+            {% endfor %}
+        </div>
+        {% else %}
+        <section class="state-panel">
+            <div class="state-heading">
+                <div class="state-icon">
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+                </div>
+                <h2>No task lists yet</h2>
+            </div>
+            <p>Create a list in Microsoft To Do, then refresh this tab.</p>
+        </section>
+        {% endif %}
+    {% else %}
+        <section class="state-panel" role="status">
+            <div class="state-heading">
+                <div class="state-icon">
+                    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.5m0 3.5h.01M10.3 3.8L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/></svg>
+                </div>
+                <h2>{{ state_title }}</h2>
+            </div>
+            <p>{{ state_message }}</p>
+            {% if state == 'configuration_required' %}
+            <code class="command">nano /home/ronhub/esl_hub/config.json</code>
+            {% elif state == 'authentication_required' %}
+            <code class="command">cd /home/ronhub/esl_hub &amp;&amp; python3 todo_auth.py</code>
+            {% endif %}
+            <div class="state-actions">
+                <a data-todo-refresh href="{{ url_for('todo_page', refresh=1) }}">Try again</a>
+            </div>
+        </section>
+    {% endif %}
+</section>

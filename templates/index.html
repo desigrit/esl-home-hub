@@ -4,6 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESL Hub</title>
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/todo.css') }}" rel="stylesheet">
     <style>
         /* Custom Tweaks on top of Bootstrap Dark Mode */
         body { background-color: #0d1117; font-family: 'Segoe UI', sans-serif; padding-bottom: 100px; }
@@ -16,6 +17,9 @@
         .mode-selector .btn-check:checked + .btn-outline-secondary { background-color: #1f6feb; color: white; border-color: #1f6feb; }
         
         /* Tab Navigation Visibility */
+        #mainTabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-color: #3d4652 #0d1117; scrollbar-width: thin; }
+        #mainTabs .nav-item { flex: 0 0 auto; }
+        #mainTabs .nav-link { min-height: 44px; white-space: nowrap; }
         .nav-tabs .nav-link { color: #8b949e; }
         .nav-tabs .nav-link.active { color: #f0f6fc; background-color: #161b22; border-color: #30363d #30363d #161b22; }
 
@@ -48,15 +52,15 @@
     </div>
 
     <form action="/update" method="POST">
-        <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
-            <li class="nav-item"><button class="nav-link active" id="dota-tab" data-bs-toggle="tab" data-bs-target="#dota" type="button">Dota 2</button></li>
-            <li class="nav-item"><button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button">Weather</button></li>
-            <li class="nav-item"><button class="nav-link" id="fitness-tab" data-bs-toggle="tab" data-bs-target="#fitness" type="button">Fitness</button></li>
-            <li class="nav-item"><button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button">Energy</button></li>
-            <li class="nav-item"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button">Formula 1</button></li>
-            <li class="nav-item"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button">Family Calendar</button></li>
-            <li class="nav-item"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button">System</button></li>
-            <li class="nav-item ms-lg-auto"><a class="nav-link" href="{{ url_for('todo_page') }}">Microsoft To Do</a></li>
+        <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist" aria-label="Dashboard sections">
+            <li class="nav-item" role="presentation"><button class="nav-link active" id="dota-tab" data-bs-toggle="tab" data-bs-target="#dota" type="button" role="tab" aria-controls="dota" aria-selected="true">Dota 2</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button" role="tab" aria-controls="weather" aria-selected="false">Weather</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="fitness-tab" data-bs-toggle="tab" data-bs-target="#fitness" type="button" role="tab" aria-controls="fitness" aria-selected="false">Fitness</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button" role="tab" aria-controls="energy" aria-selected="false">Energy</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button" role="tab" aria-controls="f1" aria-selected="false">Formula 1</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab" aria-controls="family" aria-selected="false">Family Calendar</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="todo-tab" data-bs-toggle="tab" data-bs-target="#todo" type="button" role="tab" aria-controls="todo" aria-selected="false">To Do</button></li>
         </ul>
 
         <div class="tab-content">
@@ -130,7 +134,7 @@
             {% endmacro %}
 
             {# --- DOTA TAB --- #}
-            <div class="tab-pane fade show active" id="dota" role="tabpanel">
+            <div class="tab-pane fade show active" id="dota" role="tabpanel" aria-labelledby="dota-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Road to Immortal</span>
@@ -156,7 +160,7 @@
             </div>
 
             {# --- WEATHER TAB --- #}
-            <div class="tab-pane fade" id="weather" role="tabpanel">
+            <div class="tab-pane fade" id="weather" role="tabpanel" aria-labelledby="weather-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Weather</span>
@@ -186,7 +190,7 @@
             </div>
 
             {# --- FITNESS TAB --- #}
-            <div class="tab-pane fade" id="fitness" role="tabpanel">
+            <div class="tab-pane fade" id="fitness" role="tabpanel" aria-labelledby="fitness-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Fitness</span>
@@ -212,7 +216,7 @@
             </div>
 
             {# --- ENERGY TAB --- #}
-            <div class="tab-pane fade" id="energy" role="tabpanel">
+            <div class="tab-pane fade" id="energy" role="tabpanel" aria-labelledby="energy-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Energy</span>
@@ -238,7 +242,7 @@
             </div>
            
             {# --- F1 TAB --- #}
-            <div class="tab-pane fade" id="f1" role="tabpanel">
+            <div class="tab-pane fade" id="f1" role="tabpanel" aria-labelledby="f1-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Formula 1</span>
@@ -262,7 +266,7 @@
 
 
             {# --- FAMILY CALENDAR TAB --- #}
-            <div class="tab-pane fade" id="family" role="tabpanel">
+            <div class="tab-pane fade" id="family" role="tabpanel" aria-labelledby="family-tab" tabindex="0">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Family Calendar</span>
@@ -286,7 +290,7 @@
 
 
             {# --- SYSTEM TAB --- #}
-            <div class="tab-pane fade" id="system" role="tabpanel">
+            <div class="tab-pane fade" id="system" role="tabpanel" aria-labelledby="system-tab" tabindex="0">
                  <div class="card">
                     <div class="card-header">System</div>
                     <div class="card-body">
@@ -298,8 +302,26 @@
                 </div>
             </div>
 
+            {# --- MICROSOFT TO DO TAB --- #}
+            <div class="tab-pane fade" id="todo" role="tabpanel" aria-labelledby="todo-tab" tabindex="0">
+                <div
+                    class="todo-tab-host"
+                    id="todo-content"
+                    data-endpoint="{{ url_for('todo_fragment') }}"
+                    aria-live="polite"
+                    aria-busy="true"
+                >
+                    <section class="todo-shell">
+                        <div class="todo-tab-loading" role="status">
+                            <span class="todo-tab-spinner" aria-hidden="true"></span>
+                            <span>Loading Microsoft To Do</span>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
         </div> 
-        <div class="fixed-bottom p-3 text-end" style="background: #0d1117; border-top: 1px solid #30363d;">
+        <div class="fixed-bottom p-3 text-end" id="configuration-actions" style="background: #0d1117; border-top: 1px solid #30363d;">
             <button type="submit" class="btn btn-primary btn-lg">💾 Save Configuration</button>
         </div>
     </form>
@@ -322,21 +344,135 @@
         document.getElementById(key + '-time-list').appendChild(div);
     }
 
-    document.addEventListener("DOMContentLoaded", function(){
-        var activeTab = localStorage.getItem('activeTab');
-        if (activeTab) {
-            var tabTrigger = document.querySelector(`button[data-bs-target="${activeTab}"]`);
-            if (tabTrigger) {
-                var tab = new bootstrap.Tab(tabTrigger);
-                tab.show();
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabButtons = Array.from(document.querySelectorAll('button[data-bs-toggle="tab"]'));
+        const todoHost = document.getElementById('todo-content');
+        const configurationActions = document.getElementById('configuration-actions');
+        const pageUrl = new URL(window.location.href);
+        let todoLoaded = false;
+        let todoLoading = false;
+        let forceInitialTodoRefresh = pageUrl.searchParams.get('todo_refresh') === '1';
+
+        if (forceInitialTodoRefresh) {
+            pageUrl.searchParams.delete('todo_refresh');
+            window.history.replaceState({}, '', pageUrl);
+        }
+
+        function todoLoadingMarkup() {
+            return `
+                <section class="todo-shell">
+                    <div class="todo-tab-loading" role="status">
+                        <span class="todo-tab-spinner" aria-hidden="true"></span>
+                        <span>Loading Microsoft To Do</span>
+                    </div>
+                </section>
+            `;
+        }
+
+        function todoNetworkErrorMarkup() {
+            return `
+                <section class="todo-shell">
+                    <section class="state-panel" role="alert">
+                        <div class="state-heading">
+                            <div class="state-icon">
+                                <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.5m0 3.5h.01M10.3 3.8L2.2 18a2 2 0 001.7 3h16.2a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/></svg>
+                            </div>
+                            <h2>Microsoft To Do could not load</h2>
+                        </div>
+                        <p>RonHub could not reach the task service. Check the connection and try again.</p>
+                        <div class="state-actions"><a data-todo-refresh href="/todo?refresh=1">Try again</a></div>
+                    </section>
+                </section>
+            `;
+        }
+
+        async function loadTodo(forceRefresh) {
+            if (!todoHost || todoLoading || (todoLoaded && !forceRefresh)) return;
+
+            todoLoading = true;
+            todoHost.setAttribute('aria-busy', 'true');
+            todoHost.innerHTML = todoLoadingMarkup();
+
+            const endpoint = new URL(todoHost.dataset.endpoint, window.location.origin);
+            if (forceRefresh) endpoint.searchParams.set('refresh', '1');
+
+            try {
+                const response = await fetch(endpoint, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'text/html' },
+                });
+                todoHost.innerHTML = await response.text();
+                todoLoaded = true;
+            } catch (error) {
+                todoHost.innerHTML = todoNetworkErrorMarkup();
+                todoLoaded = false;
+            } finally {
+                todoLoading = false;
+                todoHost.setAttribute('aria-busy', 'false');
             }
         }
-        var tabElsd = document.querySelectorAll('button[data-bs-toggle="tab"]');
-        tabElsd.forEach(function(tabEl) {
-            tabEl.addEventListener('shown.bs.tab', function (event) {
-                localStorage.setItem('activeTab', event.target.getAttribute('data-bs-target'));
+
+        function syncActiveTab(target) {
+            const todoIsActive = target === '#todo';
+            configurationActions.hidden = todoIsActive;
+            if (todoIsActive) {
+                loadTodo(forceInitialTodoRefresh);
+                forceInitialTodoRefresh = false;
+            }
+        }
+
+        tabButtons.forEach(function (tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function (event) {
+                const target = event.target.getAttribute('data-bs-target');
+                localStorage.setItem('activeTab', target);
+                const tabList = event.target.closest('[role="tablist"]');
+                if (tabList) {
+                    window.requestAnimationFrame(function () {
+                        const tabListBounds = tabList.getBoundingClientRect();
+                        const activeTabBounds = event.target.getBoundingClientRect();
+                        if (activeTabBounds.right > tabListBounds.right) {
+                            tabList.scrollLeft += Math.ceil(activeTabBounds.right - tabListBounds.right);
+                        } else if (activeTabBounds.left < tabListBounds.left) {
+                            tabList.scrollLeft -= Math.ceil(tabListBounds.left - activeTabBounds.left);
+                        }
+                    });
+                }
+                syncActiveTab(target);
             });
         });
+
+        todoHost.addEventListener('click', function (event) {
+            const refreshControl = event.target.closest('[data-todo-refresh]');
+            if (!refreshControl) return;
+
+            event.preventDefault();
+            refreshControl.classList.add('is-loading');
+            refreshControl.setAttribute('aria-disabled', 'true');
+            const label = refreshControl.querySelector('span');
+            if (label) label.textContent = 'Refreshing tasks';
+            loadTodo(true);
+        });
+
+        const requestedTab = pageUrl.searchParams.get('tab');
+        const requestedButton = requestedTab
+            ? document.getElementById(requestedTab + '-tab')
+            : null;
+        const savedTarget = localStorage.getItem('activeTab');
+        const savedButton = tabButtons.find(function (tabButton) {
+            return tabButton.getAttribute('data-bs-target') === savedTarget;
+        });
+        const tabToShow = requestedButton && requestedButton.matches('[data-bs-toggle="tab"]')
+            ? requestedButton
+            : savedButton;
+
+        if (tabToShow && !tabToShow.classList.contains('active')) {
+            bootstrap.Tab.getOrCreateInstance(tabToShow).show();
+        } else {
+            const activeButton = tabButtons.find(function (tabButton) {
+                return tabButton.classList.contains('active');
+            });
+            syncActiveTab(activeButton ? activeButton.getAttribute('data-bs-target') : '#dota');
+        }
     });
 </script>
 </body>

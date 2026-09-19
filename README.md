@@ -115,8 +115,9 @@ calendar controller signs its service account assertion with RS256.
 
 ### Microsoft To Do access
 
-RonHub includes a read-only `/todo` page and a JSON endpoint at `/api/todo`.
-Both use the Microsoft Graph To Do API and the delegated `Tasks.Read` permission.
+RonHub includes a read-only **To Do** dashboard tab and a JSON endpoint at
+`/api/todo`. The `/todo` route opens the dashboard with that tab selected. Both
+use the Microsoft Graph To Do API and the delegated `Tasks.Read` permission.
 
 1. Register an application in the Microsoft Entra admin center. For a personal
    account, choose **Personal Microsoft accounts only**.
