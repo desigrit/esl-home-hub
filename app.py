@@ -3,23 +3,15 @@ import os
 import time
 import threading
 import datetime
-import io
-import contextlib
 import sys
 import hmac
+import subprocess
+import copy
+from runtime import ROOT, STATE_DIR, CONFIG_PATH, atomic_json, read_json, file_lock, redact
+from scheduling import CalendarDaysTrigger
 from flask import Flask, jsonify, render_template, request, redirect, url_for
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# Import your controllers
-from controllers import (
-    dota_controller,
-    energy_controller,
-    f1_controller,
-    family_controller,
-    strava_controller,
-    todo_controller,
-    weather_controller,
-)
 from todo_service import (
     MicrosoftTodoService,
     TodoAuthenticationRequired,
@@ -30,13 +22,18 @@ from todo_service import (
 )
 
 app = Flask(__name__)
-CONFIG_FILE = 'config.json'
-LOG_FILE = 'logs.json'
-JOB_NAMES = ('dota', 'weather', 'fitness', 'energy', 'f1', 'family', 'todo')
+CONFIG_FILE = CONFIG_PATH
+LOG_FILE = ROOT / 'logs.json'
+_job_locks = {name: threading.Lock() for name in ('dota', 'weather', 'fitness', 'energy', 'f1', 'family', 'todo', 'WebScraper')}
+_active_jobs = {}
+_active_lock = threading.Lock()
+_schedule_lock = threading.Lock()
+JOB_NAMES = ('dota', 'weather', 'fitness', 'energy', 'f1', 'family', 'todo', 'WebScraper')
 
 # --- CONFIG & LOGGING ---
 def load_config():
     defaults = {
+        'WebScraper': {'enabled': False, 'mode': 'schedule', 'interval': 180, 'times': ['06:05', '09:05', '12:05', '15:05', '18:05', '21:05'], 'days': 1},
         "dota":    {"enabled": False, "mode": "interval", "interval": 15, "times": ["08:00"], "days": 1},
         "weather": {"enabled": False, "mode": "interval", "interval": 30, "times": ["10:00", "14:00"], "days": 1},
         "fitness": {"enabled": False, "mode": "interval", "interval": 60, "times": ["22:00"], "days": 1},
@@ -49,7 +46,7 @@ def load_config():
     
     if not os.path.exists(CONFIG_FILE): return defaults
     
-    with open(CONFIG_FILE, 'r') as f: 
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     for key, val in defaults.items():
@@ -60,143 +57,137 @@ def load_config():
     return data
 
 def save_config(data):
-    with open(CONFIG_FILE, 'w') as f: json.dump(data, f, indent=2)
+    atomic_json(CONFIG_FILE, data)
 
 def load_logs():
-    if not os.path.exists(LOG_FILE): 
-        return {name: [] for name in JOB_NAMES}
-    try:
-        with open(LOG_FILE, 'r') as f: 
-            logs = json.load(f)
-            # Migration: If old logs are strings, convert them to dicts
-            for k in logs:
-                for i, entry in enumerate(logs[k]):
-                    if isinstance(entry, str):
-                        logs[k][i] = {"time": entry, "status": "Legacy", "output": "No details available."}
-            for name in JOB_NAMES:
-                logs.setdefault(name, [])
-            return logs
-    except:
-        return {name: [] for name in JOB_NAMES}
+    logs = read_json(LOG_FILE, {})
+    if not isinstance(logs, dict):
+        raise ValueError('Run history is not a JSON object.')
+    for name in JOB_NAMES:
+        logs.setdefault(name, [])
+    for entries in logs.values():
+        for i, entry in enumerate(entries):
+            if isinstance(entry, str):
+                entries[i] = {'time': entry, 'status': 'Legacy', 'output': 'No details available.'}
+            elif entry.get('status') == 'Success' and not entry.get('finished_at'):
+                entries[i] = {**entry, 'status': 'Unverified', 'original_status': 'Success'}
+    return logs
 
-def log_run(job_name, status, output):
-    logs = load_logs()
-    if job_name not in logs: logs[job_name] = []
-    
-    timestamp = datetime.datetime.now().strftime("%I:%M %p, %b %d")
-    
-    entry = {
-        "time": timestamp,
-        "status": status,
-        "output": output
-    }
-    
-    logs[job_name].insert(0, entry)
-    logs[job_name] = logs[job_name][:10] # Keep last 10 runs
-    
-    with open(LOG_FILE, 'w') as f: json.dump(logs, f, indent=2)
+def log_run(job_name, status, output, **metadata):
+    with file_lock(str(LOG_FILE) + '.lock'):
+        logs = load_logs()
+        timestamp = datetime.datetime.now().astimezone()
+        entry = {'time': timestamp.strftime('%I:%M %p, %b %d'), 'status': status,
+                 'output': output[-24000:], 'finished_at': timestamp.isoformat(), **metadata}
+        logs.setdefault(job_name, []).insert(0, entry)
+        logs[job_name] = logs[job_name][:10]
+        atomic_json(LOG_FILE, logs)
 
 # --- JOB WRAPPERS ---
-def run_job(name, func, force=False):
-    cfg = load_config()
-    
-    if force or cfg.get(name, {}).get('enabled'):
-        trigger_type = "Manual" if force else "Scheduled"
-        
-        # Capture Stdout/Stderr
-        capture_buffer = io.StringIO()
-        status = "Success"
-        
-        # Redirect prints to buffer AND original terminal
-        class Tee(object):
-            def __init__(self, *files): self.files = files
-            def write(self, obj):
-                for f in self.files: f.write(obj)
-            def flush(self):
-                for f in self.files: f.flush()
-
-        original_stdout = sys.stdout
-        original_stderr = sys.stderr
-        
+def run_job(name, func=None, force=False):
+    if name not in _job_locks:
+        raise ValueError('Unknown job.')
+    if not _job_locks[name].acquire(blocking=False):
+        return False
+    started = datetime.datetime.now().astimezone()
+    monotonic_start = time.monotonic()
+    cfg = {}
+    status = 'Failed'
+    output = ''
+    try:
+        cfg = load_config()
+        if not force and not cfg.get(name, {}).get('enabled'):
+            return False
+        with _active_lock:
+            _active_jobs[name] = started.isoformat()
+        trigger = 'Manual' if force else 'Scheduled'
+        output = f'{trigger} Job: {name.capitalize()}\n'
+        limit = max(30, min(900, int(cfg.get('system', {}).get('job_timeout_seconds', 300))))
+        result = subprocess.run(
+            [sys.executable, '-u', str(ROOT / 'job_worker.py'), name],
+            input=json.dumps(cfg), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding='utf-8', cwd=ROOT, timeout=limit,
+            env={**os.environ, 'PYTHONIOENCODING': 'utf-8'},
+        )
+        output += result.stdout
+        status = {0: 'Success', 2: 'Pending', 3: 'Skipped'}.get(result.returncode, 'Failed')
+    except subprocess.TimeoutExpired as error:
+        partial = error.stdout or ''
+        if isinstance(partial, bytes):
+            partial = partial.decode('utf-8', 'replace')
+        output += partial + '\nJob timed out. Delivery is unconfirmed; the job will retry on its next schedule.'
+    except Exception as error:
+        output += f'Job failed: {error}'
+    finally:
         try:
-            # Send output to both capture buffer and real terminal
-            sys.stdout = Tee(sys.stdout, capture_buffer)
-            sys.stderr = Tee(sys.stderr, capture_buffer)
-            
-            print(f"{trigger_type} Job: {name.capitalize()}")
-            try:
-                func.run(cfg)
-            except Exception as e:
-                status = "Failed"
-                print(f"{name.capitalize()} Job Failed: {e}")
-                
+            if output:
+                output = redact(output, cfg)
+                log_run(name, status, output, started_at=started.isoformat(),
+                        duration_seconds=round(time.monotonic() - monotonic_start, 2), trigger='manual' if force else 'scheduled')
+                print(output, end='' if output.endswith('\n') else '\n', flush=True)
         finally:
-            # Restore stdout/stderr
-            sys.stdout = original_stdout
-            sys.stderr = original_stderr
-            
-        log_run(name, status, capture_buffer.getvalue())
-        
-    else:
-        # Scheduled run but disabled
-        pass
+            with _active_lock:
+                _active_jobs.pop(name, None)
+            _job_locks[name].release()
+    return True
 
 # --- SCHEDULING LOGIC ---
 def reschedule_all():
-    cfg = load_config()
-    scheduler.remove_all_jobs()
-    
-    job_map = {
-        'dota': dota_controller,
-        'weather': weather_controller,
-        'fitness': strava_controller,
-        'energy': energy_controller,
-        'f1': f1_controller,
-        'family': family_controller,
-        'todo': todo_controller,
-    }
-
-    print("🔄 Rescheduling Jobs...")
-
-    for name, controller in job_map.items():
-        settings = cfg.get(name, {})
-        
-        # MODE 1: INTERVAL
-        if settings.get('mode') == 'interval':
-            minutes = int(settings.get('interval', 30))
-            scheduler.add_job(
-                run_job, 'interval', minutes=minutes, 
-                args=[name, controller, False], id=f"{name}_interval"
-            )
-            print(f"   -> {name}: Every {minutes} mins")
-
-        # MODE 2: SPECIFIC TIMES
-        else:
-            days_gap = int(settings.get('days', 1))
-            times = settings.get('times', [])
-            
-            for t_str in times:
-                try:
-                    h, m = map(int, t_str.split(':'))
-                    now = datetime.datetime.now()
-                    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
-                    if target <= now:
-                        target += datetime.timedelta(days=1)
-                    
-                    scheduler.add_job(
-                        run_job, 'interval', days=days_gap, start_date=target,
-                        args=[name, controller, False], id=f"{name}_{t_str}"
-                    )
-                    print(f"   -> {name}: Every {days_gap} day(s) at {t_str}")
-
-                except Exception as e:
-                    print(f"   ⚠️ Invalid time format for {name}: {t_str}")
+    with _schedule_lock:
+        cfg = load_config()
+        anchors_path = STATE_DIR / 'schedule_anchors.json'
+        anchors = read_json(anchors_path, {})
+        now = datetime.datetime.now().astimezone(scheduler.timezone)
+        logs = load_logs()
+        planned = []
+        for name in JOB_NAMES:
+            settings = cfg.get(name, {})
+            if not settings.get('enabled'):
+                continue
+            if settings.get('mode') == 'interval':
+                minutes = int(settings.get('interval', 30))
+                if minutes < 1:
+                    raise ValueError(f'{name}: interval must be positive.')
+                planned.append((f'{name}_interval', name, 'interval', {'minutes': minutes}))
+                continue
+            days = int(settings.get('days', 1))
+            times = sorted(set(settings.get('times', [])))
+            if not times or days < 1:
+                raise ValueError(f'{name}: choose a positive day interval and at least one time.')
+            signature = json.dumps([days, times])
+            previous = anchors.get(name, {})
+            if previous.get('signature') == signature:
+                anchor = previous['anchor']
+            else:
+                anchor = now.date().isoformat()
+                # Seed multi-day schedules from their last scheduled run when
+                # upgrading an installation that did not persist its anchor.
+                if name not in anchors and days > 1:
+                    for entry in logs.get(name, []):
+                        if 'Scheduled Job:' in entry.get('output', ''):
+                            try:
+                                last = datetime.datetime.strptime(entry['time'], '%I:%M %p, %b %d').replace(year=now.year)
+                                if last.date() > now.date():
+                                    last = last.replace(year=now.year - 1)
+                                anchor = last.date().isoformat()
+                                break
+                            except (KeyError, ValueError):
+                                pass
+                anchors[name] = {'signature': signature, 'anchor': anchor}
+            for clock in times:
+                h, m = map(int, clock.split(':'))
+                trigger = CalendarDaysTrigger(days=days, hour=h, minute=m, anchor=anchor, timezone=scheduler.timezone)
+                planned.append((f'{name}_{clock}', name, trigger, {}))
+        # Validate every schedule before replacing any working jobs.
+        atomic_json(anchors_path, anchors)
+        scheduler.remove_all_jobs()
+        for job_id, name, trigger, options in planned:
+            scheduler.add_job(run_job, trigger, args=[name, None, False], id=job_id,
+                              coalesce=True, max_instances=1, misfire_grace_time=3600, **options)
+        print(f'Scheduled {len(planned)} updates.', flush=True)
 
 # --- INIT SCHEDULER ---
 scheduler = BackgroundScheduler()
-if os.environ.get('ESL_HUB_DISABLE_SCHEDULER') != '1':
-    scheduler.start()
-    threading.Timer(2.0, reschedule_all).start()
 
 # --- WEB ROUTES ---
 @app.route('/')
@@ -355,7 +346,14 @@ def todo_api():
 
 @app.route('/update', methods=['POST'])
 def update_settings():
-    config = load_config()
+    try:
+        with file_lock(str(CONFIG_FILE) + '.lock'):
+            return _update_settings()
+    except (TypeError, ValueError) as error:
+        return jsonify({'error': str(error)}), 400
+
+def _update_settings():
+    config = copy.deepcopy(load_config())
     form = request.form
     
     def process_tab(key):
@@ -378,6 +376,7 @@ def update_settings():
     process_tab('f1')
     process_tab('family')
     process_tab('todo')
+    process_tab('WebScraper')
 
     if 'sys_gateway_ip' in form:
         config['system']['gateway_ip'] = form.get('sys_gateway_ip')
@@ -393,11 +392,13 @@ def update_settings():
 
     if 'fit_client_id' in form:
         config['fitness']['client_id'] = form.get('fit_client_id')
-        config['fitness']['client_secret'] = form.get('fit_client_secret')
-        config['fitness']['refresh_token'] = form.get('fit_refresh_token')
+        for field, key in (('fit_client_secret', 'client_secret'), ('fit_refresh_token_new', 'refresh_token')):
+            if form.get(field, '').strip():
+                config['fitness'][key] = form[field].strip()
 
     if 'energy_auth_key' in form:
-        config['energy']['auth_key'] = form.get('energy_auth_key')
+        if form.get('energy_auth_key', '').strip():
+            config['energy']['auth_key'] = form['energy_auth_key'].strip()
         config['energy']['device_id'] = form.get('energy_device_id')
         config['energy']['cost_per_kwh'] = float(form.get('energy_cost') or 0)
 
@@ -407,20 +408,73 @@ def update_settings():
             form.get('todo_layout_id', '').strip() or '4p20c_Todo'
         )
 
+    validate_config(config)
     save_config(config)
     reschedule_all()
     return redirect(url_for('index'))
 
-@app.route('/trigger/<job_name>')
+@app.route('/trigger/<job_name>', methods=['GET', 'POST'])
 def trigger_job(job_name):
-    jobs = {'dota': dota_controller, 'weather': weather_controller, 
-            'fitness': strava_controller, 'energy': energy_controller, 'f1': f1_controller,
-            'family': family_controller, 'todo': todo_controller}
-    
-    if job_name in jobs:
-        threading.Thread(target=run_job, args=(job_name, jobs[job_name], True)).start()
-        
+    if job_name not in JOB_NAMES:
+        return jsonify({'error': 'Unknown job.'}), 404
+    with _active_lock:
+        if job_name in _active_jobs:
+            if request.method == 'POST':
+                return jsonify({'status': 'Running', 'job': job_name}), 202
+            return redirect(url_for('index'))
+        _active_jobs[job_name] = datetime.datetime.now().astimezone().isoformat()
+    threading.Thread(target=run_job, args=(job_name, None, True), daemon=True).start()
+    if request.method == 'POST':
+        return jsonify({'status': 'Running', 'job': job_name}), 202
     return redirect(url_for('index'))
 
+
+def validate_config(config):
+    for name in JOB_NAMES:
+        item = config.get(name, {})
+        if int(item.get('interval', 30)) < 1 or int(item.get('days', 1)) < 1:
+            raise ValueError(f'{name}: interval and days must be at least 1.')
+        if item.get('mode') not in ('interval', 'schedule'):
+            raise ValueError(f'{name}: invalid schedule mode.')
+        for clock in item.get('times', []):
+            datetime.datetime.strptime(clock, '%H:%M')
+        if item.get('enabled') and item.get('mode') == 'schedule' and not item.get('times'):
+            raise ValueError(f'{name}: choose at least one update time.')
+    system = config.get('system', {})
+    if not str(system.get('gateway_ip', '')).strip() or not str(system.get('store_code', '')).strip():
+        raise ValueError('Gateway address and store code are required.')
+
+
+@app.route('/api/status')
+def system_status():
+    config = load_config()
+    logs = load_logs()
+    with _active_lock:
+        active = dict(_active_jobs)
+    jobs = {}
+    for name in JOB_NAMES:
+        entries = logs.get(name, [])
+        next_times = [job.next_run_time.isoformat() for job in scheduler.get_jobs()
+                      if job.id.startswith(name + '_') and getattr(job, 'next_run_time', None)]
+        jobs[name] = {'enabled': config.get(name, {}).get('enabled', False),
+                      'running': name in active, 'started_at': active.get(name),
+                      'next_run': min(next_times) if next_times else None,
+                      'logs': entries}
+    return no_store_json({'scheduler_running': scheduler.running, 'jobs': jobs})
+
+
+@app.route('/healthz')
+def healthz():
+    try:
+        validate_config(load_config())
+        load_logs()
+        ready = scheduler.running
+        return no_store_json({'status': 'ok' if ready else 'scheduler_stopped'}, 200 if ready else 503)
+    except (OSError, ValueError, TypeError):
+        return no_store_json({'status': 'invalid_runtime_state'}, 503)
+
 if __name__ == '__main__':
+    if os.environ.get('ESL_HUB_DISABLE_SCHEDULER') != '1':
+        reschedule_all()
+        scheduler.start()
     app.run(host='0.0.0.0', port=5000, debug=False)

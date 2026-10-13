@@ -1,0 +1,21 @@
+[Unit]
+Description=ESL Hub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ronhub
+WorkingDirectory=/home/ronhub/esl_hub
+ExecStart=/usr/bin/python3 /home/ronhub/esl_hub/app.py
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONIOENCODING=utf-8
+UMask=0077
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillMode=control-group
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

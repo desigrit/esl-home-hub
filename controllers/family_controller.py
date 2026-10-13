@@ -38,8 +38,12 @@ import re
 import sys
 import time
 
+if __package__ in (None, ''):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import jwt
 import requests
+from gateway import publish
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -413,7 +417,6 @@ def run(full_config):
 
     payload = {
         "storeCode": store_code,
-        "taskId": str(int(time.time())),
         "product": [{
             "prCode": tag_id,
             "layoutId": LAYOUT_ID,
@@ -422,13 +425,8 @@ def run(full_config):
         }],
     }
 
-    r = _session().post(f"http://{gateway_ip}/api/product", json=payload, timeout=20)
-    if r.status_code == 200:
-        # Counts only, never event titles: this line ends up on the dashboard.
-        print(f"✅ Family Calendar Tag Updated! "
-              f"({len(todays)} today, {len(upcoming)} upcoming)")
-    else:
-        raise RuntimeError(f"Gateway Error {r.status_code}: {r.text[:300]}")
+    publish(sys_cfg, payload)
+    print(f'Family Calendar tag updated. {len(todays)} today, {len(upcoming)} upcoming.')
 
 
 def _cli():

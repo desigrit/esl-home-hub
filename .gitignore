@@ -13,3 +13,6 @@ controllers/test_data.json
 # Local safety backups (may contain credentials)
 *.bak-*
 *.bak
+*.lock
+.venv/
+.pytest_cache/

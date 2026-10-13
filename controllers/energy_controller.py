@@ -17,8 +17,9 @@ KEY FEATURES:
 import requests
 import datetime
 import time
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from gateway import publish
+from http_client import retry_session, request_json
+from runtime import JobSkipped, updated_label
 
 # --- VISUAL CONFIGURATION ---
 PIXELS_PER_KWH = 10     # Scaling factor: 2.5 kWh = 25 pixels high
@@ -36,24 +37,12 @@ def run(full_config):
     
     GATEWAY_IP = sys['gateway_ip']
     STORE_CODE = sys['store_code']
-    TAG_ID = cfg.get('tag_id', 'MY_STATS_02')
+    TAG_ID = cfg['tag_id']
     LAYOUT_ID = "4p20c_Energy"
 
     # --- NETWORK HELPER: RETRY SESSION ---
-    def get_retry_session(retries=3, backoff_factor=60, status_forcelist=(500, 502, 503, 504, 429)):
-        session = requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=status_forcelist,
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    def get_retry_session():
+        return retry_session()
 
     # 2. FETCH DATA FROM SHELLY CLOUD
     print("🔌 Fetching Shelly Data...")
@@ -61,7 +50,7 @@ def run(full_config):
     now = datetime.datetime.now()
     today_str = now.strftime("%Y-%m-%d")
     
-    # We request 33 days to be safe, then slice the last 30 valid days.
+    # Shelly aggregates long ranges into months. Keep the graph request daily.
     start_date = now - datetime.timedelta(days=33)
     
     params = {
@@ -72,34 +61,28 @@ def run(full_config):
     }
     
     history = []
-    try:
-        r = get_retry_session().get(SHELLY_BASE_URL, params=params, timeout=30)
-        
-        if r.status_code != 200:
-            print(f"❌ API Error: {r.text}")
-            return
-
-        data = r.json()
-        raw_history = data.get('history', [])
-        
-        for entry in raw_history:
+    with get_retry_session() as session:
+        data = request_json(session, 'GET', SHELLY_BASE_URL, label='Shelly history', params=params)
+        if not isinstance(data, dict) or not isinstance(data.get('history'), list):
+            raise RuntimeError('Shelly returned invalid consumption history.')
+        for entry in data['history']:
             # --- DATA FILTERING LOGIC ---
             # 1. Tariff ID '1': We only care about standard consumption (ignore returned/solar).
             # 2. Date < Today: We only show completed days.
             entry_date_str = entry['datetime'].split(" ")[0]
-            if entry.get('tariff_id') == "1" and entry_date_str < today_str:
+            if str(entry.get('tariff_id')) == "1" and entry_date_str < today_str:
                 history.append({
                     'date': entry['datetime'],
                     'kwh': entry['consumption'] / 1000.0,
-                    'cost': entry.get('cost', 0)
+                    'cost': entry.get('cost') if entry.get('cost') is not None else entry['consumption'] / 1000.0 * float(cfg.get('cost_per_kwh', 0))
                 })
-    except Exception as e:
-        print(f"❌ Connection Error (Shelly): {e}")
-        return
 
     if not history: 
-        print("⚠️ No valid history found (check dates).")
-        return
+        raise RuntimeError('Shelly returned no completed consumption days. The previous tag data was preserved.')
+    history.sort(key=lambda entry: entry['date'])
+    latest_date = datetime.datetime.strptime(history[-1]['date'], '%Y-%m-%d %H:%M:%S').date()
+    if (now.date() - latest_date).days > int(cfg.get('max_data_age_days', 2)):
+        raise RuntimeError(f'Shelly consumption data is stale (latest day: {latest_date}). The previous tag data was preserved.')
 
     # 3. STAT CALCULATIONS
     yesterday = history[-1]
@@ -114,16 +97,31 @@ def run(full_config):
     # Average Watts = (Total kWh / Days) -> Daily kWh -> *1000 / 24hrs -> Watts
     month_avg_watts = int(((month_kwh / month_days) * 1000) / 24) if month_days else 0
 
-    # Year-To-Date Stats
+    # For YTD, combine completed earlier months with this month's daily rows.
+    # Shelly's long-range endpoint changes interval automatically, so a single
+    # yearly query cannot supply a daily graph or exclude today's partial data.
     curr_year = str(now.year)
-    ytd = [d for d in history if d['date'].startswith(curr_year)]
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    ytd = [d for d in history if d['date'] >= month_start.strftime('%Y-%m-%d')]
+    if now.month > 1:
+        year_params = dict(params, date_from=f'{now.year}-01-01 00:00:00',
+                           date_to=(month_start - datetime.timedelta(seconds=1)).strftime('%Y-%m-%d %H:%M:%S'))
+        with get_retry_session() as session:
+            yearly = request_json(session, 'GET', SHELLY_BASE_URL, label='Shelly year-to-date history', params=year_params)
+        if not isinstance(yearly, dict) or not isinstance(yearly.get('history'), list):
+            raise RuntimeError('Shelly returned invalid year-to-date history.')
+        for entry in yearly['history']:
+            if str(entry.get('tariff_id')) == '1' and f'{now.year}-01-01' <= entry['datetime'] < month_start.strftime('%Y-%m-%d'):
+                kwh = entry['consumption'] / 1000.0
+                ytd.append({'date': entry['datetime'], 'kwh': kwh,
+                            'cost': entry.get('cost') if entry.get('cost') is not None else kwh * float(cfg.get('cost_per_kwh', 0))})
     ytd_kwh = sum(d['kwh'] for d in ytd)
     ytd_cost = sum(d['cost'] for d in ytd)
-    ytd_days = len(ytd)
+    ytd_days = (now.date() - datetime.date(now.year, 1, 1)).days
     ytd_avg_watts = int(((ytd_kwh / ytd_days) * 1000) / 24) if ytd_days else 0
 
     # Date Markers for the X-Axis
-    graph_slice = history[-29:] # The slice we actually draw
+    graph_slice = history[-30:]
     def fmt_date(entry):
         d = datetime.datetime.strptime(entry['date'], "%Y-%m-%d %H:%M:%S")
         return d.strftime("%b %d")
@@ -155,11 +153,7 @@ def run(full_config):
     pr_data[92] = marker_right
 
     # [PR_93] : Timestamp
-    if now.minute == 0:
-        time_str = now.strftime("%b %-d, %-I %p")      
-    else:
-        time_str = now.strftime("%b %-d, %-I:%M %p")   
-    pr_data[93] = f"Last updated: {time_str}"
+    pr_data[93] = updated_label(now)
 
     # [PR_60 - PR_89] : Graph Bars
     # Layout Designer: These fields control the HEIGHT of 30 distinct rectangles.
@@ -173,7 +167,6 @@ def run(full_config):
     # 5. PUSH TO GATEWAY
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": str(int(time.time())), 
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -182,11 +175,5 @@ def run(full_config):
         }]
     }
     
-    try:
-        r = get_retry_session().post(f"http://{GATEWAY_IP}/api/product", json=payload, timeout=20)
-        if r.status_code == 200:
-            print(f"🚀 Energy Tag Updated! (Latest Data: {marker_right})")
-        else:
-            print(f"❌ Gateway Error: {r.text}")
-    except Exception as e:
-        print(f"❌ Connection Error (Gateway): {e}")
+    publish(sys, payload)
+    print(f"Energy tag updated. Latest data: {marker_right}.")

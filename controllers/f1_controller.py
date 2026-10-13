@@ -16,8 +16,9 @@ import requests
 import datetime
 import time
 from zoneinfo import ZoneInfo
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from gateway import publish
+from http_client import retry_session, request_json
+from runtime import JobSkipped, updated_label
 
 def run(full_config):
     # 1. LOAD CONFIGURATION
@@ -30,33 +31,15 @@ def run(full_config):
     LAYOUT_ID = "4p20c_Formula1"
 
     # --- NETWORK HELPER: RETRY SESSION ---
-    def get_retry_session(retries=3, backoff_factor=60):
-        session = requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=(500, 502, 503, 504, 429),
-            allowed_methods=["HEAD", "GET", "OPTIONS"]
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    def get_retry_session():
+        return retry_session()
 
     # 2. DATA FETCHING HELPER
     def fetch_jolpica_data(endpoint):
         # If endpoint is empty, it fetches the root current calendar
         url = f"https://api.jolpi.ca/ergast/f1/current/{endpoint}.json" if endpoint else "https://api.jolpi.ca/ergast/f1/current.json"
-        try:
-            r = get_retry_session().get(url, timeout=20)
-            if r.status_code == 200:
-                return r.json()
-            print(f"❌ API Error: {r.text}")
-        except Exception as e:
-            print(f"❌ Fetch Error ({endpoint}): {e}")
-        return None
+        with get_retry_session() as session:
+            return request_json(session, 'GET', url, label=f'Jolpica {endpoint or "schedule"}')
 
     print("🏎️ Fetching F1 Data...")
     
@@ -67,8 +50,7 @@ def run(full_config):
     constructor_data = fetch_jolpica_data("constructorStandings")
 
     if not next_race_data:
-        print("❌ Could not fetch next race data.")
-        return
+        raise RuntimeError('Jolpica returned an empty next-race response.')
 
     # --- PROCESS RACE DATA ---
     try:
@@ -79,9 +61,8 @@ def run(full_config):
         if schedule_data:
             total_rounds = schedule_data['MRData']['total']
             
-    except (KeyError, IndexError):
-        print("⚠️ No upcoming races found in the calendar.")
-        return
+    except IndexError:
+        raise JobSkipped('No upcoming Formula 1 races. The previous tag data was preserved.') from None
 
     season = race.get('season', '2026')
     round_num = race.get('round', '?')
@@ -134,8 +115,8 @@ def run(full_config):
             points = standings[i]['points']
             wdc_lines.append(f"{i+1}. {first_name} {last_name} - {points}")
         wdc_string = "\n".join(wdc_lines)
-    except Exception: 
-        wdc_string = "1. TBD - 0\n2. TBD - 0\n3. TBD - 0"
+    except (KeyError, TypeError, IndexError):
+        raise RuntimeError('Jolpica returned incomplete driver standings. The previous tag data was preserved.') from None
 
     # WCC Top 3
     wcc_lines = []
@@ -146,8 +127,8 @@ def run(full_config):
             team_points = c_standings[i]['points']
             wcc_lines.append(f"{i+1}. {team_name} - {team_points}")
         wcc_string = "\n".join(wcc_lines)
-    except Exception: 
-        wcc_string = "1. TBD - 0\n2. TBD - 0\n3. TBD - 0"
+    except (KeyError, TypeError, IndexError):
+        raise RuntimeError('Jolpica returned incomplete constructor standings. The previous tag data was preserved.') from None
 
     # 4. DATA MAPPING (LAYOUT DESIGNER)
     pr_data = [""] * 280
@@ -164,7 +145,7 @@ def run(full_config):
     for event_name, event_dt in processed_events[:4]: # Cap at 4 just in case
         pr_data[idx] = event_name
         # Format: "Fri, 6:00 am". Use %-d and %-I to remove leading zeros
-        pr_data[idx+1] = event_dt.strftime("%a, %-I:%M %p").replace("AM", "am").replace("PM", "pm")
+        pr_data[idx+1] = event_dt.strftime("%a, %I:%M %p").replace(", 0", ", ").replace("AM", "am").replace("PM", "pm")
         idx += 2
     
     # [PR_271 - PR_272] Standings (Multi-line)
@@ -176,14 +157,11 @@ def run(full_config):
     
     # [PR_274] Timestamp
     now = datetime.datetime.now()
-    time_str = now.strftime("%b %-d, %-I:%M %p") if now.minute != 0 else now.strftime("%b %-d, %-I %p")
-    pr_data[274] = f"Last updated: {time_str}"
+    pr_data[274] = updated_label(now)
 
     # 5. PUSH TO GATEWAY
-    unique_task_id = str(int(time.time()))
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": unique_task_id,
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -192,11 +170,5 @@ def run(full_config):
         }]
     }
     
-    try:
-        r = get_retry_session().post(f"http://{GATEWAY_IP}/api/product", json=payload, timeout=20)
-        if r.status_code == 200:
-            print(f"✅ F1 Tag Updated! (Next Track: {track_id})")
-        else:
-            print(f"❌ Gateway Error {r.status_code}: {r.text}")
-    except Exception as e:
-        print(f"❌ Connection Error (Gateway): {e}")
+    publish(sys, payload)
+    print(f"Formula 1 tag updated. Next track: {track_id}.")

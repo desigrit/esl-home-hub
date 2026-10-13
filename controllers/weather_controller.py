@@ -17,8 +17,9 @@ KEY FEATURES:
 import requests
 import datetime
 import time
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from gateway import publish
+from http_client import retry_session, request_json
+from runtime import JobSkipped, updated_label
 
 # --- ASSET MAPPING ---
 # These strings (e.g., "RAIN") must match the Image Mapping keys in Layout Designer.
@@ -54,31 +55,14 @@ def run(full_config):
     LOCATIONS = cfg['locations']
 
     # --- NETWORK HELPER: RETRY SESSION ---
-    def get_retry_session(retries=3, backoff_factor=60, status_forcelist=(500, 502, 503, 504, 429)):
-        session = requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=status_forcelist,
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    def get_retry_session():
+        return retry_session()
 
     # 2. HELPER: FETCH WEATHER
     def get_weather(lat, lon):
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code,precipitation_probability&daily=temperature_2m_max,temperature_2m_min&temperature_unit=celsius&forecast_days=2&timeformat=unixtime&timezone=auto"
-        try:
-            r = get_retry_session().get(url, timeout=70) 
-            r.raise_for_status()
-            return r.json()
-        except Exception as e:
-            print(f"⚠️ API Fetch Failed for {lat},{lon}: {e}")
-            return None
+        with get_retry_session() as session:
+            return request_json(session, 'GET', url, label='Open-Meteo forecast')
 
     # 3. FETCH DATA
     print(f"☁️ Fetching Weather for {list(LOCATIONS.keys())}...")
@@ -87,8 +71,7 @@ def run(full_config):
     hyd = get_weather(LOCATIONS["Hyderabad"]["lat"], LOCATIONS["Hyderabad"]["lon"])
     
     if not sea or not delhi or not hyd:
-        print("❌ Weather Fetch Failed")
-        return
+        raise RuntimeError('Open-Meteo returned an empty forecast. The previous tag data was preserved.')
 
     # --- DATA MAPPING (LAYOUT DESIGNER) ---
     data = [""] * 100 
@@ -102,11 +85,7 @@ def run(full_config):
     
     # Smart Timestamp
     now = datetime.datetime.now()
-    if now.minute == 0:
-        time_str = now.strftime("%b %-d, %-I %p")      
-    else:
-        time_str = now.strftime("%b %-d, %-I:%M %p")   
-    data[13] = f"Last updated: {time_str}"
+    data[13] = updated_label(now)
     data[14] = ICON_MAP.get(curr['weather_code'], "PARTLYCLOUDY")
 
     # [PR_15 - PR_29] : Hourly Forecast (Next 15 hours in 3-hour steps)
@@ -120,7 +99,7 @@ def run(full_config):
         ts = hourly['time'][target_idx]
         dt = datetime.datetime.fromtimestamp(ts)
         
-        data[15 + i] = dt.strftime("%-I %p") # Time (e.g. "2 PM")
+        data[15 + i] = dt.strftime("%I %p").lstrip("0") # Time (e.g. "2 PM")
         
         code = hourly['weather_code'][target_idx]
         data[20 + i] = ICON_MAP.get(code, "PARTLYCLOUDY") # Icon
@@ -146,10 +125,8 @@ def run(full_config):
     data[37] = ICON_MAP.get(h_curr['weather_code'], "PARTLYCLOUDY")
 
     # 4. PUSH TO GATEWAY
-    task_id = str(int(time.time() * 1000))
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": task_id,
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -158,11 +135,5 @@ def run(full_config):
         }]
     }
     
-    try:
-        response = get_retry_session().post(GATEWAY_URL, json=payload, timeout=20)
-        if response.status_code == 200:
-            print(f"✅ Weather Tag Updated! (Seattle: {data[10]})")
-        else:
-            print(f"❌ Gateway Error {response.status_code}: {response.text}")
-    except Exception as e:
-        print(f"❌ Connection Error: {e}")
+    publish(sys, payload)
+    print(f"Weather tag updated. Seattle: {data[10]}.")

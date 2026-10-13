@@ -1,7 +1,9 @@
 {
   "system": {
     "gateway_ip": "192.168.0.10",
-    "store_code": "2000"
+    "store_code": "2000",
+    "job_timeout_seconds": 300,
+    "gateway_confirmation_seconds": 45
   },
   "weather": {
     "enabled": false,

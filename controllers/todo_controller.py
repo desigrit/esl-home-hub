@@ -22,11 +22,9 @@ import datetime
 import re
 import time
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from todo_service import MicrosoftTodoService, build_todo_view
+from gateway import publish
 
 
 LAYOUT_ID = "4p20c_Todo"
@@ -65,22 +63,6 @@ PR_CONTRACT_VERSION = 248
 PR_DISPLAY_MODE = 249
 
 _SPACE = re.compile(r"\s+")
-
-
-def _session(retries=3, backoff_factor=2):
-    session = requests.Session()
-    retry = Retry(
-        total=retries,
-        read=retries,
-        connect=retries,
-        backoff_factor=backoff_factor,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=["HEAD", "GET", "OPTIONS", "POST"],
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-    return session
 
 
 def _limit(value, maximum):
@@ -264,7 +246,6 @@ def run(full_config, *, service=None, session=None, now=None):
 
     payload = {
         "storeCode": system["store_code"],
-        "taskId": str(int(time.time())),
         "product": [{
             "prCode": tag_id,
             "layoutId": layout_id,
@@ -273,14 +254,8 @@ def run(full_config, *, service=None, session=None, now=None):
         }],
     }
 
-    request_session = session or _session()
-    response = request_session.post(
-        f"http://{system['gateway_ip']}/api/product",
-        json=payload,
-        timeout=int(config.get("gateway_timeout_seconds", 20)),
-    )
-    if response.status_code != 200:
-        raise RuntimeError(f"Gateway returned HTTP {response.status_code}.")
+    publish(system, payload, session=session,
+            timeout=int(config.get('gateway_timeout_seconds', 20)))
 
     print("Microsoft To Do tag updated.")
     return pr_data

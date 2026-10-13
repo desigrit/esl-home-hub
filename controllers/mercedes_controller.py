@@ -14,10 +14,13 @@ import os
 import subprocess
 import datetime
 import time
-import requests
+import sys as sys_module
+from pathlib import Path
+if __package__ in (None, ''):
+    sys_module.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from gateway import publish
+from runtime import atomic_json, JobSkipped
 from dateutil import parser 
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 # Get the directory where this script is located (e.g., /home/ronhub/esl_hub/controllers)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -37,13 +40,12 @@ def run(full_config):
     sys = full_config['system']
     
     if 'WebScraper' not in full_config:
-        print("⚠️ Config missing 'WebScraper' block. Skipping.")
-        return
+        raise JobSkipped('Mercedes source is not configured.')
 
     cfg = full_config['WebScraper'] 
     
     if not cfg['enabled']:
-        return
+        raise JobSkipped('Mercedes source is disabled.')
 
     GATEWAY_URL = f"http://{sys['gateway_ip']}/api/product"
     STORE_CODE = sys['store_code']
@@ -55,14 +57,6 @@ def run(full_config):
     SSH_KEY_PATH = cfg['ssh_key_path']
     REMOTE_PATH = cfg['remote_path']
 
-    # --- HELPER: RETRY SESSION ---
-    def get_retry_session(retries=3, backoff_factor=1):
-        session = requests.Session()
-        retry = Retry(total=retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        return session
-
     # --- HELPER: STATE MANAGEMENT ---
     def load_state():
         if os.path.exists(STATE_FILE):
@@ -72,27 +66,38 @@ def run(full_config):
         return {"seen_ids": [], "alert_expiry": None}
 
     def save_state(state):
-        with open(STATE_FILE, "w") as f: json.dump(state, f, indent=2)
+        atomic_json(STATE_FILE, state)
 
     # 2. DOWNLOAD DATA (SCP)
     print(f"🏎️  Fetching WebScraper Data from Azure...")
     cmd = [
-        "scp", "-i", SSH_KEY_PATH, "-o", "StrictHostKeyChecking=no",
-        f"{AZURE_USER}@{AZURE_IP}:{REMOTE_PATH}", LOCAL_JSON_PATH
+        "scp", "-i", SSH_KEY_PATH, "-o", "StrictHostKeyChecking=yes",
+        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+        f"{AZURE_USER}@{AZURE_IP}:{REMOTE_PATH}", LOCAL_JSON_PATH + '.download'
     ]
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except subprocess.CalledProcessError:
-        print("❌ SCP Download Failed. Check keys, IP, or file path.")
-        return
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                       timeout=45)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        detail = (getattr(error, 'stderr', b'') or b'').decode('utf-8', 'replace').lower()
+        reason = 'connection timed out' if 'timed out' in detail or isinstance(error, subprocess.TimeoutExpired) else 'SSH authentication, host key, or remote file error'
+        raise RuntimeError(f'Mercedes source download failed: {reason}. Check the configured Azure server and SSH connection. The previous tag data was preserved.') from None
 
     # 3. PROCESS DATA
     try:
-        with open(LOCAL_JSON_PATH, "r") as f:
+        with open(LOCAL_JSON_PATH + '.download', "r") as f:
             new_data = json.load(f)
-    except Exception as e:
-        print(f"❌ JSON Load Failed: {e}")
-        return
+    except (OSError, ValueError):
+        raise RuntimeError('Mercedes source returned invalid JSON. The previous tag data was preserved.') from None
+    if not isinstance(new_data, dict) or not new_data.get('last_run'):
+        raise RuntimeError('Mercedes source has no last-run timestamp.')
+    last_run = parser.parse(new_data['last_run'])
+    if last_run.tzinfo is None:
+        last_run = last_run.replace(tzinfo=datetime.datetime.now().astimezone().tzinfo)
+    age = datetime.datetime.now().astimezone() - last_run
+    if age.total_seconds() > float(cfg.get('max_data_age_hours', 24)) * 3600:
+        raise RuntimeError('Mercedes source data is more than a day old. The previous tag data was preserved.')
+    os.replace(LOCAL_JSON_PATH + '.download', LOCAL_JSON_PATH)
 
     state = load_state()
     
@@ -100,10 +105,9 @@ def run(full_config):
     new_finds = [uid for uid in current_ids if uid not in state['seen_ids']]
     
     if new_finds:
-        print(f"🚨 NEW CARS DETECTED: {new_finds}")
+        print(f'New vehicle matches: {len(new_finds)}.')
         state['alert_expiry'] = (datetime.datetime.now() + datetime.timedelta(hours=24)).isoformat()
         state['seen_ids'] = list(set(state['seen_ids']) | current_ids)
-        save_state(state)
 
     is_red = False
     if state['alert_expiry']:
@@ -111,7 +115,6 @@ def run(full_config):
             is_red = True
         else:
             state['alert_expiry'] = None 
-            save_state(state)
 
     # 4. PREPARE DISPLAY DATA
     data = [""] * 300 
@@ -149,10 +152,8 @@ def run(full_config):
     data[256] = "1" if is_red else "2"
 
     # 5. PUSH TO GATEWAY
-    task_id = str(int(time.time() * 1000))
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": task_id,
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -161,14 +162,9 @@ def run(full_config):
         }]
     }
     
-    try:
-        response = get_retry_session().post(GATEWAY_URL, json=payload, timeout=20)
-        if response.status_code == 200:
-            print(f"✅ WebScraper Tag Updated! ({'RED' if is_red else 'WHITE'} Alert)")
-        else:
-            print(f"❌ Gateway Error {response.status_code}: {response.text}")
-    except Exception as e:
-        print(f"❌ Connection Error: {e}")
+    publish(sys, payload)
+    save_state(state)
+    print(f"Mercedes tag updated. {'Red' if is_red else 'White'} alert.")
 
 # ==========================================
 # STANDALONE TESTING BLOCK

@@ -41,6 +41,12 @@ class FakeTodoService:
 class FakeResponse:
     status_code = 200
 
+    def __init__(self, body):
+        self.body = body
+
+    def json(self):
+        return self.body
+
 
 class FakeSession:
     def __init__(self):
@@ -48,7 +54,11 @@ class FakeSession:
 
     def post(self, url, json, timeout):
         self.calls.append({"url": url, "json": json, "timeout": timeout})
-        return FakeResponse()
+        return FakeResponse({'result': 'ok', 'data': {'taskId': 'test-task'}})
+
+    def get(self, url, timeout):
+        return FakeResponse({'taskId': 'test-task', 'endTime': 1,
+                             'successRate': 100, 'tagSts': [{'status': 'ok'}]})
 
 
 class TodoControllerTests(unittest.TestCase):

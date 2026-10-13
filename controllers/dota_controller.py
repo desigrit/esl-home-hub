@@ -17,8 +17,26 @@ KEY FEATURES:
 import requests
 import datetime
 import time
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import math
+from gateway import publish
+from http_client import retry_session, request_json
+from runtime import JobSkipped, updated_label
+
+
+def fetch_ranked_matches(session, steam_id, baseline, now, *, max_pages=50):
+    matches = {}
+    cutoff = now.timestamp() - 30 * 86400
+    for page in range(max_pages):
+        batch = request_json(session, 'GET', f'https://api.opendota.com/api/players/{steam_id}/matches',
+                             label='OpenDota matches', params={'limit': 100, 'offset': page * 100, 'lobby_type': 7})
+        if not isinstance(batch, list) or any(not isinstance(item, dict) or not {'match_id', 'start_time', 'player_slot', 'radiant_win'} <= item.keys() for item in batch):
+            raise RuntimeError('OpenDota returned invalid match data.')
+        if batch and all(item['match_id'] in matches for item in batch):
+            raise RuntimeError('OpenDota repeated a page. Refusing to publish an incomplete MMR estimate.')
+        matches.update((item['match_id'], item) for item in batch)
+        if len(batch) < 100 or (min(item['match_id'] for item in batch) <= baseline and min(item['start_time'] for item in batch) <= cutoff):
+            return sorted(matches.values(), key=lambda item: item['match_id'], reverse=True)
+    raise RuntimeError('OpenDota history limit reached before the baseline. Increase dota.max_history_pages or choose a newer baseline.')
 
 def run(full_config):
     # 1. READ CONFIG
@@ -29,6 +47,8 @@ def run(full_config):
     START_MMR = int(cfg['baseline_mmr'])
     START_MATCH_ID = int(cfg['baseline_match_id'])
     TARGET_MMR = int(cfg['target_mmr'])
+    if START_MATCH_ID <= 0 or START_MMR <= 0 or TARGET_MMR <= 0:
+        raise ValueError('Set a valid Dota baseline match, baseline MMR, and target MMR.')
     
     # Layout & Pixel Config
     MAIN_BAR_PIXEL_WIDTH = int(cfg.get('main_bar_width', 300))
@@ -45,47 +65,32 @@ def run(full_config):
     LAYOUT_ID = "4p20c_Dota"
 
     # --- NETWORK HELPER: RETRY SESSION ---
-    def get_retry_session(retries=3, backoff_factor=60, status_forcelist=(500, 502, 503, 504, 429)):
-        session = requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=status_forcelist,
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    def get_retry_session():
+        return retry_session()
 
     # 2. HELPER FUNCTIONS
     def get_hero_dict():
         try:
-            r = get_retry_session().get("https://api.opendota.com/api/heroes", timeout=20)
-            if r.status_code == 200:
-                return {h['id']: h['localized_name'] for h in r.json()}
+            with get_retry_session() as session:
+                r = session.get("https://api.opendota.com/api/heroes", timeout=20)
+                if r.status_code == 200:
+                    return {h['id']: h['localized_name'] for h in r.json()}
         except Exception as e:
             print(f"⚠️ Hero Fetch Warning: {e}")
         return {}
 
     def fetch_matches():
         print(f"⚔️ Fetching Dota 2 Matches for {STEAM_ID}...")
-        url = f"https://api.opendota.com/api/players/{STEAM_ID}/matches?limit=100&lobby_type=7" # Lobby 7 = Ranked
-        try:
-            r = get_retry_session().get(url, timeout=20)
-            if r.status_code == 200:
-                return r.json()
-            print(f"❌ API Error: {r.text}")
-        except Exception as e:
-            print(f"❌ Connection Error: {e}")
-        return []
+        with get_retry_session() as session:
+            return fetch_ranked_matches(session, STEAM_ID, START_MATCH_ID, datetime.datetime.now(),
+                                        max_pages=max(1, min(100, int(cfg.get('max_history_pages', 50)))))
 
     # 3. EXECUTION
     heroes = get_hero_dict()
     matches = fetch_matches()
-    if not matches: return
+    if not matches:
+        raise JobSkipped('OpenDota returned no ranked matches; the previous tag data was preserved.')
+    print(f'Loaded {len(matches)} ranked matches through the baseline and 30-day window.')
 
     # --- CALC STATS ---
     now = datetime.datetime.now()
@@ -117,7 +122,7 @@ def run(full_config):
 
     current_mmr = START_MMR + mmr_delta
     mmr_needed = max(0, TARGET_MMR - current_mmr)
-    wins_needed = int(mmr_needed / 25)
+    wins_needed = math.ceil(mmr_needed / 25)
     wins_needed_str = f"+{wins_needed}"
     
     def get_stat_str(match_list):
@@ -142,8 +147,10 @@ def run(full_config):
 
     # --- VISUAL BAR CALCULATIONS ---
     # 1. Main MMR Bar (Progress to Immortal)
-    bracket_base = 5622
-    bracket_top = 6600
+    bracket_base = int(cfg.get('bracket_base', 5622))
+    bracket_top = TARGET_MMR
+    if bracket_top <= bracket_base:
+        raise ValueError('Dota target MMR must exceed the progress bar baseline.')
     bracket_range = bracket_top - bracket_base
     prog_raw = (current_mmr - bracket_base) / bracket_range
     main_bar_w = int(max(0, min(1, prog_raw)) * MAIN_BAR_PIXEL_WIDTH)
@@ -195,16 +202,10 @@ def run(full_config):
     pr_data[225] = r_30
     
     # Timestamp
-    if now.minute == 0:
-        time_str = now.strftime("%b %-d, %-I %p")      
-    else:
-        time_str = now.strftime("%b %-d, %-I:%M %p")   
-    pr_data[226] = f"Last updated: {time_str}" 
+    pr_data[226] = updated_label(now)
 
-    unique_task_id = str(int(time.time()))
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": unique_task_id,
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -213,8 +214,5 @@ def run(full_config):
         }]
     }
     
-    try:
-        get_retry_session().post(f"http://{GATEWAY_IP}/api/product", json=payload, timeout=20)
-        print(f"🚀 Dota Tag Updated! MMR: {pr_data[201]}")
-    except Exception as e:
-        print(f"❌ Gateway Error: {e}")
+    publish(sys, payload)
+    print(f"Dota tag updated. Estimated MMR: {pr_data[201]}")

@@ -22,12 +22,14 @@ import datetime
 import time
 import calendar
 import os
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from gateway import publish
+from http_client import retry_session, request_json
+from runtime import JobSkipped, updated_label
+from runtime import CONFIG_PATH, update_json
 
 # --- CONFIGURATION ---
 # These control the visual scaling of the progress bars.
-CONFIG_FILE = 'config.json'
+CONFIG_FILE = CONFIG_PATH
 TARGET_WORKOUTS = 14     # Goal: 14 workouts/month = 100% bar width
 MAX_BAR_WIDTH = 147      # Pixel width of the progress bar on the layout
 
@@ -51,20 +53,8 @@ def run(full_config):
     # Creates a request session that automatically retries failed connections.
     # Critical for Raspberry Pi setups where WiFi might sleep or be spotty.
     # Backoff: 60s -> 120s -> 240s
-    def get_retry_session(retries=3, backoff_factor=60, status_forcelist=(500, 502, 503, 504, 429)):
-        session = requests.Session()
-        retry = Retry(
-            total=retries,
-            read=retries,
-            connect=retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=status_forcelist,
-            allowed_methods=["HEAD", "GET", "OPTIONS", "POST"]
-        )
-        adapter = HTTPAdapter(max_retries=retry)
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
-        return session
+    def get_retry_session():
+        return retry_session()
 
     # 2. STRAVA AUTHENTICATION
     # Strava tokens expire short-term. We use the Refresh Token to get a new Access Token.
@@ -78,31 +68,22 @@ def run(full_config):
             'grant_type': 'refresh_token',
             'f': 'json'
         }
-        try:
-            r = get_retry_session().post("https://www.strava.com/oauth/token", data=payload, timeout=20)
-            
-            if r.status_code == 200:
-                data = r.json()
-                
-                # SELF-HEALING CONFIG: Update file if token changes
-                new_refresh = data.get('refresh_token')
-                if new_refresh and new_refresh != REFRESH_TOKEN:
-                    print("⚠️ Token Rotated! Updating config.json...")
-                    update_config_token(new_refresh)
-                
-                return data['access_token']
-            print(f"❌ Auth Failed: {r.text}")
-        except Exception as e:
-            print(f"❌ Connection Error (Auth): {e}")
-        return None
+        with get_retry_session() as session:
+            data = request_json(session, 'POST', 'https://www.strava.com/oauth/token', label='Strava authentication', data=payload)
+        if not isinstance(data, dict) or not data.get('access_token'):
+            raise RuntimeError('Strava authentication returned no access token.')
+        new_refresh = data.get('refresh_token')
+        if new_refresh and new_refresh != REFRESH_TOKEN:
+            update_config_token(new_refresh)
+        return data['access_token']
 
     def update_config_token(new_token):
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'r') as f:
-                data = json.load(f)
+        def mutate(data):
+            if data['fitness']['refresh_token'] != REFRESH_TOKEN:
+                raise RuntimeError('Strava credentials changed during refresh. Please run the update again.')
             data['fitness']['refresh_token'] = new_token
-            with open(CONFIG_FILE, 'w') as f:
-                json.dump(data, f, indent=2)
+        update_json(CONFIG_FILE, mutate)
+        print('Saved rotated Strava refresh token.')
 
     # 3. DATA FETCHING
     def fetch_activities(access_token):
@@ -113,23 +94,23 @@ def run(full_config):
         epoch_time = int(start_of_month.timestamp())
         
         headers = {'Authorization': f"Bearer {access_token}"}
-        params = {'after': epoch_time, 'per_page': 50}
-        
-        try:
-            r = get_retry_session().get("https://www.strava.com/api/v3/athlete/activities", headers=headers, params=params, timeout=20)
-            if r.status_code == 200:
-                return r.json()
-            print(f"❌ API Error: {r.text}")
-        except Exception as e:
-            print(f"❌ Fetch Error: {e}")
-        return []
+        activities = []
+        with get_retry_session() as session:
+            for page in range(1, 21):
+                batch = request_json(session, 'GET', 'https://www.strava.com/api/v3/athlete/activities',
+                                     label='Strava activities', headers=headers,
+                                     params={'after': epoch_time, 'per_page': 100, 'page': page})
+                if not isinstance(batch, list):
+                    raise RuntimeError('Strava returned invalid activity data.')
+                activities.extend(batch)
+                if len(batch) < 100:
+                    return activities
+        raise RuntimeError('Strava activity pagination limit reached. No partial update was published.')
 
     # 4. DATA PROCESSING
     token = get_access_token()
-    if not token: return
     
     activities = fetch_activities(token)
-    if isinstance(activities, dict): return 
 
     now = datetime.datetime.now()
     
@@ -150,16 +131,17 @@ def run(full_config):
     last_xfit = {"hr_avg": "-", "hr_peak": "-"}
     
     # Process each activity and update grid
-    for act in activities:
+    for act in sorted(activities, key=lambda item: item.get('start_date_local', ''), reverse=True):
         if not isinstance(act, dict): continue
         if 'start_date_local' not in act or 'type' not in act: continue
 
         try:
             act_date = datetime.datetime.strptime(act['start_date_local'], "%Y-%m-%dT%H:%M:%SZ")
+            if (act_date.year, act_date.month) != (now.year, now.month):
+                continue
             day_of_month = act_date.day
             grid_idx = start_day_index + (day_of_month - 1)
             
-            if grid_idx >= 35: continue 
             
             act_type = act['type']
             
@@ -171,15 +153,15 @@ def run(full_config):
             
             if act_type == "Run":
                 run_count += 1
-                if grid[grid_idx] != "3": grid[grid_idx] = "2" # Don't overwrite weights with run
-                if act.get('has_heartrate'):
+                if grid_idx < 35 and grid[grid_idx] != "3": grid[grid_idx] = "2"
+                if act.get('has_heartrate') and last_run['hr_avg'] == '-':
                     last_run['hr_avg'] = f"{int(act.get('average_heartrate',0))} bpm"
                     last_run['hr_peak'] = f"{int(act.get('max_heartrate',0))} bpm"
 
             elif act_type in ["WeightTraining", "CrossFit", "HIIT", "Workout"]:
                 xfit_count += 1
-                grid[grid_idx] = "3"
-                if act.get('has_heartrate'):
+                if grid_idx < 35: grid[grid_idx] = "3"
+                if act.get('has_heartrate') and last_xfit['hr_avg'] == '-':
                     last_xfit['hr_avg'] = f"{int(act.get('average_heartrate',0))} bpm"
                     last_xfit['hr_peak'] = f"{int(act.get('max_heartrate',0))} bpm"
         except: continue
@@ -220,17 +202,11 @@ def run(full_config):
     
     # [PR_145] : Last Updated Timestamp
     # Logic: If 9:00 PM, show "9 PM". If 9:23 PM, show "9:23 PM"
-    if now.minute == 0:
-        time_str = now.strftime("%b %-d, %-I %p")      
-    else:
-        time_str = now.strftime("%b %-d, %-I:%M %p")   
-    pr_data[145] = f"Last updated: {time_str}"
+    pr_data[145] = updated_label(now)
     pr_data[146] = now.strftime("%B")
 
-    unique_task_id = str(int(time.time()))
     payload = {
         "storeCode": STORE_CODE,
-        "taskId": unique_task_id,
         "product": [{
             "prCode": TAG_ID,
             "layoutId": LAYOUT_ID,
@@ -239,11 +215,5 @@ def run(full_config):
         }]
     }
     
-    try:
-        r = get_retry_session().post(f"http://{GATEWAY_IP}/api/product", json=payload, timeout=20)
-        if r.status_code == 200:
-            print("🚀 Strava Tag Updated!")
-        else:
-            print(f"❌ Gateway Error: {r.text}")
-    except Exception as e:
-        print(f"❌ Connection Error (Gateway): {e}")
+    publish(sys, payload)
+    print("Fitness tag updated.")

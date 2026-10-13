@@ -71,6 +71,8 @@ Every controller exposes a single entry point and reads everything it needs from
 the config it is handed. Nothing is hardcoded.
 
 ```python
+from gateway import publish
+
 def run(full_config):
     sys_cfg = full_config["system"]      # gateway_ip, store_code
     cfg = full_config["your_section"]    # tag_id, credentials, schedule
@@ -79,9 +81,8 @@ def run(full_config):
     pr_data[150] = "27"
     pr_data[151] = "september"
 
-    requests.post(f"http://{sys_cfg['gateway_ip']}/api/product", json={
+    publish(sys_cfg, {
         "storeCode": sys_cfg["store_code"],
-        "taskId": str(int(time.time())),
         "product": [{
             "prCode": cfg["tag_id"],
             "layoutId": "4p20c_YourLayout",
@@ -91,9 +92,10 @@ def run(full_config):
     })
 ```
 
-Register it in `app.py` in three places: the import, the scheduler's `job_map`,
-and the manual trigger map. Add a settings tab in `templates/index.html` and a
-matching `process_tab` call if it needs one.
+Register it in `job_worker.py`, `app.py`'s `JOB_NAMES` and job lock map. Add a
+settings tab in `templates/index.html`, config defaults, and a matching
+`process_tab` call if it needs one. Raise an exception when fetching or
+publishing fails; raise `JobSkipped` for a valid response with nothing to show.
 
 The array must be at least as long as the highest index you write. Controllers
 here range from 100 to 300 entries.
@@ -248,8 +250,57 @@ Not in the repository, by design: `config.json`, `logs.json`, run logs,
 
 - The gateway sits on its own network segment behind the Pi and is not routable
   from the LAN. The Pi proxies its web UI.
-- Strava rotates its refresh token on every use, and the controller writes the
-  new one back into `config.json`. Do not overwrite that file while a run is in
-  flight.
-- The Mercedes controller runs from cron rather than the in-app scheduler and
-  has no dashboard tab.
+- Strava can rotate its refresh token. Updates use a locked, atomic write to
+  preserve other settings. Blank password fields keep the saved credentials.
+- Mercedes runs through the same scheduler, worker, and dashboard as the other
+  integrations. Remove the old `mercedes_controller.py` cron entry when upgrading
+  an installation that still uses it, after backing up the crontab.
+
+## Run reliability and diagnosis
+
+Each run gets an isolated process and a five-minute deadline. Overlapping runs
+of the same integration are suppressed. Config and logs use locked, atomic
+writes. Calendar schedules retain their local clock time through daylight
+saving changes; multi-day anchors survive restarts and configuration saves.
+
+The gateway assigns task IDs with `taskId: -1` and `priorTaskId: -1`. Reusing
+whole-second timestamps across controllers causes the gateway to reject later
+updates as duplicates. `gateway.publish` checks the response body and then
+polls the returned task until the gateway confirms delivery to the tags.
+
+- **Success:** the gateway confirmed tag delivery.
+- **Failed:** a data fetch, validation, or delivery failed.
+- **Pending:** the gateway accepted the update but did not confirm delivery
+  within the deadline. Inspect the task ID in the run output before retrying.
+- **Skipped:** no applicable data was available, or another run was active.
+- **Unverified:** a historical success recorded before delivery checks existed.
+  Those old logs may contain output from multiple simultaneous jobs.
+
+`/healthz` checks the app, scheduler, config, and run history. `/api/status`
+provides current runs, next scheduled updates, and recent outcomes. The dashboard
+refreshes these without reloading unsaved settings. These endpoints are intended
+for the same trusted network as the management page.
+
+`system.job_timeout_seconds` can override the worker deadline (30 to 900 seconds).
+`system.gateway_confirmation_seconds` controls the delivery wait (1 to 120
+seconds, default 45). The sample service in `deploy/esl_hub.service` waits for
+network startup, uses private file permissions, and restarts with a delay.
+
+Failed upstream requests preserve the previous display. An inactive Strava app
+requires action in the owner's [Strava API settings](https://www.strava.com/settings/api).
+The Mercedes source must answer SSH and provide recent data. Neither condition
+can be repaired by repeatedly submitting a tag update.
+
+Dota MMR is an estimate using the configured baseline and +/-25 per ranked match.
+The controller paginates through the baseline and the 30-day statistics window,
+instead of limiting the calculation to the latest 100 matches. Shelly uses
+separate daily and longer-range requests so the graph stays daily and YTD totals
+include earlier months without today's incomplete consumption.
+
+Run the regression suite before deploying:
+
+```bash
+python3 -m unittest discover -s tests -q
+sudo systemctl restart esl_hub
+curl --fail http://localhost:5000/healthz
+```

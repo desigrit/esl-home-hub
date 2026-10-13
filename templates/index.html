@@ -39,19 +39,24 @@
             color: #c9d1d9; 
             white-space: pre-wrap; 
         }
-        .status-success { color: #238636; }
-        .status-fail { color: #da3633; }
+        .status-success { color: #56d364; }
+        .status-fail { color: #ff7b72; }
+        .status-pending { color: #e3b341; }
+        .log-output { overflow-wrap: anywhere; }
+        .log-header { min-height: 44px; gap: 12px; flex-wrap: wrap; }
+        .log-header:focus-visible { outline: 2px solid #58a6ff; outline-offset: 3px; }
     </style>
 </head>
 <body>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>ESL Hub</h2>
+        <h1 class="h2">ESL Hub</h1>
         <span class="badge bg-secondary badge-gateway">Gateway: {{ config.system.gateway_ip }}</span>
     </div>
 
-    <form action="/update" method="POST">
+    <p id="connection-status" class="text-warning" role="status" hidden></p>
+    <form action="/update" method="POST" id="configuration-form">
         <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist" aria-label="Dashboard sections">
             <li class="nav-item" role="presentation"><button class="nav-link active" id="dota-tab" data-bs-toggle="tab" data-bs-target="#dota" type="button" role="tab" aria-controls="dota" aria-selected="true">Dota 2</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="weather-tab" data-bs-toggle="tab" data-bs-target="#weather" type="button" role="tab" aria-controls="weather" aria-selected="false">Weather</button></li>
@@ -60,6 +65,7 @@
             <li class="nav-item" role="presentation"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button" role="tab" aria-controls="f1" aria-selected="false">Formula 1</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab" aria-controls="family" aria-selected="false">Family Calendar</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="todo-tab" data-bs-toggle="tab" data-bs-target="#todo" type="button" role="tab" aria-controls="todo" aria-selected="false">To Do</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="WebScraper-tab" data-bs-toggle="tab" data-bs-target="#WebScraper" type="button" role="tab" aria-controls="WebScraper" aria-selected="false">Mercedes</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System</button></li>
         </ul>
 
@@ -105,31 +111,21 @@
             {# --- MACRO: LOG VIEWER --- #}
             {% macro log_viewer(key) %}
             <div class="log-section">
-                <h6 class="text-muted text-uppercase small fw-bold mb-3">Execution Logs</h6>
-                {% if logs[key] %}
-                    {% for l in logs[key] %}
-                    <div class="log-entry">
-                        <div class="log-header" data-bs-toggle="collapse" data-bs-target="#log-{{key}}-{{loop.index}}">
-                            <div>
-                                {% if l.status == 'Success' %}
-                                    <span class="status-success">Success</span>
-                                {% elif l.status == 'Failed' %}
-                                    <span class="status-fail">Failed</span>
-                                {% else %}
-                                    <span class="text-muted">{{ l.status }}</span>
-                                {% endif %}
-                                <span class="ms-2 text-white">{{ l.time }}</span>
-                            </div>
-                            <small class="text-muted">Show Output ▼</small>
-                        </div>
-                        <div class="collapse" id="log-{{key}}-{{loop.index}}">
-                            <div class="log-output">{{ l.output }}</div>
-                        </div>
-                    </div>
-                    {% endfor %}
+                <h2 class="text-muted small fw-bold mb-3">Execution Logs</h2>
+                <p class="small" data-job-state="{{ key }}" role="status" aria-live="polite"></p>
+                <div data-job-logs="{{ key }}">
+                {% for l in logs[key] %}
+                    <details class="log-entry">
+                        <summary class="log-header">
+                            <span><span class="{{ 'status-success' if l.status == 'Success' else 'status-fail' if l.status == 'Failed' else 'status-pending' }}">{{ l.status }}</span><span class="ms-2 text-white">{{ l.time }}</span></span>
+                            <span class="text-muted">View output</span>
+                        </summary>
+                        <div class="log-output">{{ l.output }}</div>
+                    </details>
                 {% else %}
-                    <div class="text-muted small fst-italic">No logs available yet.</div>
-                {% endif %}
+                    <p class="text-muted small">No runs recorded yet.</p>
+                {% endfor %}
+                </div>
             </div>
             {% endmacro %}
 
@@ -153,7 +149,7 @@
                             <div class="col-md-4">{{ scheduler_ui('dota') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/dota" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="dota" href="/trigger/dota" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('dota') }}
                     </div>
                 </div>
@@ -183,7 +179,7 @@
                             <div class="col-md-4">{{ scheduler_ui('weather') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/weather" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="weather" href="/trigger/weather" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('weather') }}
                     </div>
                 </div>
@@ -200,16 +196,16 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <label class="form-label">Refresh Token</label>
-                                <input type="text" class="form-control mb-3" name="fit_refresh_token" value="{{ config.fitness.refresh_token }}">
+                                <input type="password" class="form-control mb-3" name="fit_refresh_token_new" value="" placeholder="Leave blank to keep the current token" autocomplete="new-password">
                                 <div class="row g-2">
                                     <div class="col-6"><label>Client ID</label><input type="text" class="form-control" name="fit_client_id" value="{{ config.fitness.client_id }}"></div>
-                                    <div class="col-6"><label>Client Secret</label><input type="password" class="form-control" name="fit_client_secret" value="{{ config.fitness.client_secret }}"></div>
+                                    <div class="col-6"><label>Client Secret</label><input type="password" class="form-control" name="fit_client_secret" value="" placeholder="Leave blank to keep current" autocomplete="new-password"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">{{ scheduler_ui('fitness') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/fitness" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="fitness" href="/trigger/fitness" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('fitness') }}
                     </div>
                 </div>
@@ -226,7 +222,7 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <label class="form-label">Auth Key</label>
-                                <input type="password" class="form-control mb-3" name="energy_auth_key" value="{{ config.energy.auth_key }}">
+                                <input type="password" class="form-control mb-3" name="energy_auth_key" value="" placeholder="Leave blank to keep the current key" autocomplete="new-password">
                                 <div class="row g-2">
                                     <div class="col-6"><label>Device ID</label><input type="text" class="form-control" name="energy_device_id" value="{{ config.energy.device_id }}"></div>
                                     <div class="col-6"><label>Cost ($)</label><input type="number" step="0.01" class="form-control" name="energy_cost" value="{{ config.energy.cost_per_kwh }}"></div>
@@ -235,7 +231,7 @@
                             <div class="col-md-4">{{ scheduler_ui('energy') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/energy" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="energy" href="/trigger/energy" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('energy') }}
                     </div>
                 </div>
@@ -258,7 +254,7 @@
                             <div class="col-md-4">{{ scheduler_ui('f1') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/f1" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="f1" href="/trigger/f1" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('f1') }}
                     </div>
                 </div>
@@ -282,12 +278,28 @@
                             <div class="col-md-4">{{ scheduler_ui('family') }}</div>
                         </div>
                         <hr>
-                        <a href="/trigger/family" class="btn btn-success w-100">Run Update Now</a>
+                        <a data-run-job="family" href="/trigger/family" class="btn btn-success w-100">Run Update Now</a>
                         {{ log_viewer('family') }}
                     </div>
                 </div>
             </div>
 
+
+            <div class="tab-pane fade" id="WebScraper" role="tabpanel" aria-labelledby="WebScraper-tab" tabindex="0">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Mercedes listings</span>
+                        <div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" name="WebScraper_enabled" aria-label="Enable Mercedes updates" {% if config.WebScraper.enabled %}checked{% endif %}></div>
+                    </div>
+                    <div class="card-body">
+                        <p>Refresh listings from the configured source server.</p>
+                        {{ scheduler_ui('WebScraper') }}
+                        <hr>
+                        <a data-run-job="WebScraper" href="/trigger/WebScraper" class="btn btn-success w-100">Run Update Now</a>
+                        {{ log_viewer('WebScraper') }}
+                    </div>
+                </div>
+            </div>
 
             {# --- SYSTEM TAB --- #}
             <div class="tab-pane fade" id="system" role="tabpanel" aria-labelledby="system-tab" tabindex="0">
@@ -345,7 +357,7 @@
                             </div>
                             <div class="col-md-6">
                                 {% if config.todo.tag_id %}
-                                <a href="/trigger/todo" class="btn btn-success w-100">Run Update Now</a>
+                                <a data-run-job="todo" href="/trigger/todo" class="btn btn-success w-100">Run Update Now</a>
                                 {% else %}
                                 <span class="btn btn-secondary disabled w-100" aria-disabled="true">Add a tag ID before running</span>
                                 {% endif %}
@@ -373,11 +385,13 @@
         </div> 
         <div class="fixed-bottom p-3 text-end" id="configuration-actions" style="background: #0d1117; border-top: 1px solid #30363d;">
             <button type="submit" class="btn btn-primary btn-lg">Save Configuration</button>
+            <p id="configuration-status" class="mt-2" role="status" aria-live="polite"></p>
         </div>
     </form>
 </div>
 
 <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/run-status.js') }}" defer></script>
 <script>
     function toggleMode(key, mode) {
         document.getElementById(key + '-interval-view').classList.toggle('d-none', mode !== 'interval');
