@@ -337,6 +337,7 @@ def build_pr_data(todays, upcoming, now):
         pr[pr_name] = format_title(ev["name"])
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
+    tomorrow = now.date() + datetime.timedelta(days=1)
     for ev, (pr_date, pr_name, pr_time) in zip(upcoming[:MAX_UPCOMING], UPCOMING_SLOTS):
         # The marker prefixes the name, and only on timed events: those are the
         # rows that were folded, so it is the honest signal that later
@@ -346,7 +347,7 @@ def build_pr_data(todays, upcoming, now):
         # colours the row marker. Include the prefix in the title's character
         # budget so long names still have room for the two trailing dots.
         folded = bool(ev.get("series")) and not ev["all_day"]
-        pr[pr_date] = fmt_date(ev["date"])
+        pr[pr_date] = "Tomorrow" if ev["date"] == tomorrow else fmt_date(ev["date"])
         pr[pr_name] = format_title(("(R) " if folded else "") + ev["name"])
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
