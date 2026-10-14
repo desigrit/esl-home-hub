@@ -67,6 +67,7 @@ PR_SIZE = 250
 
 MAX_TODAY = len(TODAY_SLOTS)
 MAX_UPCOMING = len(UPCOMING_SLOTS)
+TITLE_CHAR_LIMIT = 29  # Length of "haircut at Kim Studio @ 4:30p".
 
 _token_cache = {}
 
@@ -315,6 +316,14 @@ def layout_state(today_count):
     return "2" if today_count == 3 else "3"
 
 
+def format_title(name):
+    """Keep title payloads within the agreed 29-character display budget."""
+    name = ' '.join(name.split())
+    if len(name) <= TITLE_CHAR_LIMIT:
+        return name
+    return name[:TITLE_CHAR_LIMIT - 2].rstrip() + '..'
+
+
 def build_pr_data(todays, upcoming, now):
     pr = [""] * PR_SIZE
 
@@ -325,7 +334,7 @@ def build_pr_data(todays, upcoming, now):
     pr[PR_STATE] = layout_state(len(todays))
 
     for ev, (pr_name, pr_time) in zip(todays[:MAX_TODAY], TODAY_SLOTS):
-        pr[pr_name] = ev["name"]
+        pr[pr_name] = format_title(ev["name"])
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     for ev, (pr_date, pr_name, pr_time) in zip(upcoming[:MAX_UPCOMING], UPCOMING_SLOTS):
@@ -334,12 +343,11 @@ def build_pr_data(todays, upcoming, now):
         # occurrences are hidden. All-day rows are never folded and a birthday
         # announcing that it recurs says nothing. It must not go in the time
         # field either, which the layout reads as empty to mean all-day when it
-        # colours the row marker. The prefix costs about four characters of a
-        # field that already auto-shrinks, so a recurring name longer than
-        # roughly 26 characters will start to truncate.
+        # colours the row marker. Include the prefix in the title's character
+        # budget so long names still have room for the two trailing dots.
         folded = bool(ev.get("series")) and not ev["all_day"]
         pr[pr_date] = fmt_date(ev["date"])
-        pr[pr_name] = ("(R) " if folded else "") + ev["name"]
+        pr[pr_name] = format_title(("(R) " if folded else "") + ev["name"])
         pr[pr_time] = "" if ev["all_day"] else fmt_time(ev["start"])
 
     return pr

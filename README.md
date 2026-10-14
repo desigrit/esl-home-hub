@@ -207,6 +207,15 @@ python3 controllers/family_controller.py --check <calendar_id>
 python3 controllers/family_controller.py --dry-run
 ```
 
+### Calendar title overflow
+
+The controller limits today's and upcoming event titles to 29 characters,
+using `haircut at Kim Studio @ 4:30p` as the baseline. Longer titles use up to
+27 characters followed by `..`. A recurring event's `(R)` prefix counts toward
+the same limit. Titles are shortened only in the tag payload; the full titles
+in Google Calendar remain unchanged. This is a character budget, not a pixel
+measurement, so the existing layout still controls font rendering.
+
 ## Configuration
 
 `config.json` holds credentials and is deliberately untracked. Every controller
