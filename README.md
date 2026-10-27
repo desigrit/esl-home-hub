@@ -2,27 +2,11 @@
 
 Retail electronic shelf labels, repurposed as always-on household dashboards.
 
-Walk down any supermarket aisle and the price tickets on the shelf edge are not
-card any more. They are electronic shelf labels: a small e-paper display, a
-radio, a coin cell, and a gateway in the back office pushing prices to thousands
-of them at once. Retail buys them by the pallet, which makes them cheap on the
-second-hand market and very good at the one thing a wall dashboard actually
-needs, which is holding a page of information for months without being plugged
-into anything.
+The price labels in many supermarkets are small e-paper displays. They hold a page of information for months on a battery and are often available second-hand.
 
 ![Electronic shelf labels doing their day job on a grocery shelf](docs/shelf-tags.jpg)
 
-They are also a nicer object than a tablet. No glow, no notifications, no black
-rectangle when it sleeps. A tag that has not changed since this morning looks
-exactly like a printed card, because that is what it was designed to imitate.
-
-So this project takes that hardware and points it at something other than the
-price of oranges.
-
-A Flask app on a Raspberry Pi pulls from external APIs on a schedule and pushes
-rendered payloads to a set of Rainus InforTab e-paper tags. The tags refresh a
-few times a day, draw no power between refreshes, need no wires, and stay
-readable in daylight.
+I wanted that same quiet, always-visible information at home: no glow, notifications or charging cable. A Raspberry Pi fetches household data on a schedule and sends it through a Rainus InforTab gateway to the labels.
 
 ## What is on the wall
 
@@ -38,6 +22,20 @@ readable in daylight.
 | Mercedes | A scraper on a remote VM, over SCP | `4p20c_WebScraper` |
 | Family calendar | Google Calendar, today and what is coming up | `4p20c_SharedCalendar` |
 
+## Decisions behind ESL Hub
+
+**Choose a quiet display over constant updates.** I repurposed retail e-paper labels for household information. They stay readable without a glowing screen or a power cable. The tradeoff is a small display, three colors and scheduled refreshes, so each view needs a clear choice about what deserves space.
+
+**Define success at the display.** During repairs, we found that a request could be accepted by the gateway without reaching a tag. The app now waits for delivery confirmation. An accepted update without confirmation is **Pending**, not **Success**. This takes longer to check, but avoids a reassuring status while the wall still shows old information. Failed data requests preserve the previous display, which may be out of date.
+
+**How I worked with AI.** I asked Codex to investigate missed updates and review the system for reliability. It helped trace failures, change the code and add tests. I checked the physical experience and followed up when calendar information was missing or hard to read.
+
+**Where I pushed back.** When long calendar titles looked wrong, I stopped changes to the vendor's Layout Designer and asked for a code fix. We used a title that fit as the baseline: 29 characters, with longer titles shortened to 27 plus two dots. This keeps the layout stable, but character counts cannot guarantee that every title fits equally well.
+
+I also questioned an explanation that blamed missing events on the screen's four-row limit. A closer check found some events had been excluded before they reached the display. That was a reminder to trace the missing data before changing the layout.
+
+**What I would test next.** I would test lost connections, stale data, long titles and missing event details on the physical tags. Delivery confirmation shows that an update arrived; it does not prove the information is complete or easy to read.
+
 ## How it works
 
 ```mermaid
@@ -49,14 +47,12 @@ flowchart LR
     W[Flask dashboard] --> C
 ```
 
-A controller fetches data, formats it into a flat array of strings, and POSTs
-that array to the gateway along with a tag ID and a layout ID. The gateway
-renders the layout against the array and transmits the image to the tag over its
-own 2.4GHz radio.
+Each data source has a small program called a controller. It fetches information
+and sends the values, display ID and layout ID to the gateway. The gateway puts
+those values into the layout and sends the finished image to the display.
 
-Nothing about the visual design lives in this repository. Layouts are built in
-the vendor's Layout Designer, and a controller only decides what goes into each
-slot.
+Layouts are made separately in the vendor's Layout Designer. This repository
+controls what information fills each slot.
 
 ## Hardware
 
