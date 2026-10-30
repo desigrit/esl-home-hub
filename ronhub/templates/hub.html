@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f6f3">
+  <meta name="hub-csrf" content="{{ csrf }}">
+  <meta name="description" content="Manage your home automation, displays, and scheduled workflows in RonHub.">
+  <title>RonHub | Home overview</title>
+  <link rel="icon" type="image/svg+xml" href="/hub/assets/favicon.svg">
+  <link rel="preload" href="/hub/assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/hub/assets/hub.css">
+  <script src="/hub/assets/hub.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" href="/" data-nav><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 14 16 5l11 9v12a2 2 0 0 1-2 2h-6v-9h-6v9H7a2 2 0 0 1-2-2Z"/></svg><span>RonHub<span class="brand-subtitle">A little more connected.</span></span></a>
+    <button class="mobile-menu" aria-expanded="false" aria-controls="main-nav">Menu <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <nav id="main-nav">
+      <a href="/" data-nav class="nav-link" id="nav-overview"><span data-icon="home"></span><span>Overview</span></a>
+      <p class="nav-label">Your systems</p>
+      {% for system in systems %}
+      <a href="{{ system.path }}" data-nav class="nav-link" id="nav-{{ system.id }}"><span data-icon="{{ system.icon }}"></span><span class="nav-text">{% if system.id == 'insignia' %}Insignia Facebook<small>Notifications</small>{% elif system.id == 'calendar' %}Family Calendar<small>Zectrix Note 4C</small>{% else %}{{ system.name }}{% endif %}</span><span class="nav-state" data-nav-status="{{ system.id }}" aria-label="Checking status"></span></a>
+      {% endfor %}
+      <div class="nav-bottom"><a href="/settings" class="nav-link" data-nav id="nav-settings"><span data-icon="settings"></span><span>Hub settings</span></a></div>
+    </nav>
+    <div class="sidebar-footer"><div><span class="dot unknown" id="rail-dot"></span><strong id="rail-health">Connecting to home</strong></div><span id="rail-time">ronhub.local</span></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div id="breadcrumbs">Your home / Overview</div><div class="topbar-right"><span class="network-label"><span class="dot healthy"></span>Home network</span><time id="today"></time></div></header>
+    <div id="connection-banner" class="connection-banner" role="alert" hidden></div>
+    <main id="main" tabindex="-1" aria-busy="true"><div class="loading-page"><h1>Home overview</h1><p>Connecting to your systems...</p><div class="skeleton"></div><div class="skeleton short"></div></div></main>
+    <footer class="page-footer"><span>RonHub <span class="footer-separator">/</span> Home automation, together.</span><span id="updated-at">Checking connections</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

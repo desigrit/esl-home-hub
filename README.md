@@ -8,6 +8,19 @@ The price labels in many supermarkets are small e-paper displays. They hold a pa
 
 I wanted that same quiet, always-visible information at home: no glow, notifications or charging cable. A Raspberry Pi fetches household data on a schedule and sends it through a Rainus InforTab gateway to the labels.
 
+## RonHub management
+
+The Pi's website now brings five systems into one interface: ESL Home Hub,
+Family Calendar on the Zectrix Note 4C, Insignia Facebook Notifications,
+Reddit Unban, and Local GPU through Shambu and Tailscale. The overview shows
+Pi health and actionable failures; each system has its own settings and evidence.
+ESL displays have individual tabs for activity, schedules, and controls.
+
+The new interface is at `/`, with the previous dashboard preserved at `/legacy`.
+See the [RonHub setup and integration guide](docs/ronhub.md) for the Windows
+status bridge, Azure reader, deployment, tests, and adding another system.
+The [design reference](DESIGN.md) records the shared UI components and tokens.
+
 ## What is on the wall
 
 ![ESL Hub tags on the wall](https://github.com/user-attachments/assets/ac6768f4-3a76-4984-afa0-34c49547267f)
@@ -89,8 +102,9 @@ def run(full_config):
 ```
 
 Register it in `job_worker.py`, `app.py`'s `JOB_NAMES` and job lock map. Add a
-settings tab in `templates/index.html`, config defaults, and a matching
-`process_tab` call if it needs one. Raise an exception when fetching or
+display entry and editable fields in `ronhub/registry.py`, plus config defaults.
+For the legacy dashboard, also update `templates/index.html` and its matching
+`process_tab` handler. Raise an exception when fetching or
 publishing fails; raise `JobSkipped` for a valid response with nothing to show.
 
 The array must be at least as long as the highest index you write. Controllers
@@ -108,7 +122,7 @@ cp config.example.json config.json   # then fill in your own values
 python app.py                        # dashboard on :5000
 ```
 
-Python 3.9 or newer, for `zoneinfo`. `PyJWT` needs the `crypto` extra because the
+Use Python 3.11 or newer. `PyJWT` needs the `crypto` extra because the
 calendar controller signs its service account assertion with RS256.
 
 ### Microsoft To Do access

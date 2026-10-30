@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T05:45:25.185Z",
+  "title": "Design System: RonHub",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Warm Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.00283 128.49)",
+          "oklch(26.43% 0.00283 128.49)",
+          "oklch(37.86% 0.00283 128.49)",
+          "oklch(49.29% 0.00283 128.49)",
+          "oklch(60.71% 0.00283 128.49)",
+          "oklch(72.14% 0.00283 128.49)",
+          "oklch(83.57% 0.00283 128.49)",
+          "oklch(95% 0.00283 128.49)"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Pale Stone",
+        "tonalRamp": [
+          "oklch(15% 0.00570 128.53)",
+          "oklch(26.43% 0.00570 128.53)",
+          "oklch(37.86% 0.00570 128.53)",
+          "oklch(49.29% 0.00570 128.53)",
+          "oklch(60.71% 0.00570 128.53)",
+          "oklch(72.14% 0.00570 128.53)",
+          "oklch(83.57% 0.00570 128.53)",
+          "oklch(95% 0.00570 128.53)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "White Panel",
+        "tonalRamp": [
+          "oklch(15% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95% 0.00000 0.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Evergreen Ink",
+        "tonalRamp": [
+          "oklch(15% 0.02749 165.44)",
+          "oklch(26.43% 0.02749 165.44)",
+          "oklch(37.86% 0.02749 165.44)",
+          "oklch(49.29% 0.02749 165.44)",
+          "oklch(60.71% 0.02749 165.44)",
+          "oklch(72.14% 0.02749 165.44)",
+          "oklch(83.57% 0.02749 165.44)",
+          "oklch(95% 0.02749 165.44)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Sage Ink",
+        "tonalRamp": [
+          "oklch(15% 0.01902 162.27)",
+          "oklch(26.43% 0.01902 162.27)",
+          "oklch(37.86% 0.01902 162.27)",
+          "oklch(49.29% 0.01902 162.27)",
+          "oklch(60.71% 0.01902 162.27)",
+          "oklch(72.14% 0.01902 162.27)",
+          "oklch(83.57% 0.01902 162.27)",
+          "oklch(95% 0.01902 162.27)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Stone Rule",
+        "tonalRamp": [
+          "oklch(15% 0.01136 141.26)",
+          "oklch(26.43% 0.01136 141.26)",
+          "oklch(37.86% 0.01136 141.26)",
+          "oklch(49.29% 0.01136 141.26)",
+          "oklch(60.71% 0.01136 141.26)",
+          "oklch(72.14% 0.01136 141.26)",
+          "oklch(83.57% 0.01136 141.26)",
+          "oklch(95% 0.01136 141.26)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Soft Stone",
+        "tonalRamp": [
+          "oklch(15% 0.00568 128.53)",
+          "oklch(26.43% 0.00568 128.53)",
+          "oklch(37.86% 0.00568 128.53)",
+          "oklch(49.29% 0.00568 128.53)",
+          "oklch(60.71% 0.00568 128.53)",
+          "oklch(72.14% 0.00568 128.53)",
+          "oklch(83.57% 0.00568 128.53)",
+          "oklch(95% 0.00568 128.53)"
+        ]
+      },
+      "green": {
+        "role": "primary",
+        "displayName": "Deep Evergreen",
+        "tonalRamp": [
+          "oklch(15% 0.05929 172.41)",
+          "oklch(26.43% 0.05929 172.41)",
+          "oklch(37.86% 0.05929 172.41)",
+          "oklch(49.29% 0.05929 172.41)",
+          "oklch(60.71% 0.05929 172.41)",
+          "oklch(72.14% 0.05929 172.41)",
+          "oklch(83.57% 0.05929 172.41)",
+          "oklch(95% 0.05929 172.41)"
+        ]
+      },
+      "green-soft": {
+        "role": "primary",
+        "displayName": "Evergreen Wash",
+        "tonalRamp": [
+          "oklch(15% 0.01580 154.46)",
+          "oklch(26.43% 0.01580 154.46)",
+          "oklch(37.86% 0.01580 154.46)",
+          "oklch(49.29% 0.01580 154.46)",
+          "oklch(60.71% 0.01580 154.46)",
+          "oklch(72.14% 0.01580 154.46)",
+          "oklch(83.57% 0.01580 154.46)",
+          "oklch(95% 0.01580 154.46)"
+        ]
+      },
+      "green-hover": {
+        "role": "primary",
+        "displayName": "Deep Evergreen Hover",
+        "tonalRamp": [
+          "oklch(15% 0.04944 170.41)",
+          "oklch(26.43% 0.04944 170.41)",
+          "oklch(37.86% 0.04944 170.41)",
+          "oklch(49.29% 0.04944 170.41)",
+          "oklch(60.71% 0.04944 170.41)",
+          "oklch(72.14% 0.04944 170.41)",
+          "oklch(83.57% 0.04944 170.41)",
+          "oklch(95% 0.04944 170.41)"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Evergreen",
+        "tonalRamp": [
+          "oklch(15% 0.07018 170.70)",
+          "oklch(26.43% 0.07018 170.70)",
+          "oklch(37.86% 0.07018 170.70)",
+          "oklch(49.29% 0.07018 170.70)",
+          "oklch(60.71% 0.07018 170.70)",
+          "oklch(72.14% 0.07018 170.70)",
+          "oklch(83.57% 0.07018 170.70)",
+          "oklch(95% 0.07018 170.70)"
+        ]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Amber",
+        "tonalRamp": [
+          "oklch(15% 0.10340 60.27)",
+          "oklch(26.43% 0.10340 60.27)",
+          "oklch(37.86% 0.10340 60.27)",
+          "oklch(49.29% 0.10340 60.27)",
+          "oklch(60.71% 0.10340 60.27)",
+          "oklch(72.14% 0.10340 60.27)",
+          "oklch(83.57% 0.10340 60.27)",
+          "oklch(95% 0.10340 60.27)"
+        ]
+      },
+      "amber-soft": {
+        "role": "secondary",
+        "displayName": "Amber Wash",
+        "tonalRamp": [
+          "oklch(15% 0.01807 78.24)",
+          "oklch(26.43% 0.01807 78.24)",
+          "oklch(37.86% 0.01807 78.24)",
+          "oklch(49.29% 0.01807 78.24)",
+          "oklch(60.71% 0.01807 78.24)",
+          "oklch(72.14% 0.01807 78.24)",
+          "oklch(83.57% 0.01807 78.24)",
+          "oklch(95% 0.01807 78.24)"
+        ]
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Rust",
+        "tonalRamp": [
+          "oklch(15% 0.13586 28.47)",
+          "oklch(26.43% 0.13586 28.47)",
+          "oklch(37.86% 0.13586 28.47)",
+          "oklch(49.29% 0.13586 28.47)",
+          "oklch(60.71% 0.13586 28.47)",
+          "oklch(72.14% 0.13586 28.47)",
+          "oklch(83.57% 0.13586 28.47)",
+          "oklch(95% 0.13586 28.47)"
+        ]
+      },
+      "red-soft": {
+        "role": "secondary",
+        "displayName": "Rust Wash",
+        "tonalRamp": [
+          "oklch(15% 0.01364 34.30)",
+          "oklch(26.43% 0.01364 34.30)",
+          "oklch(37.86% 0.01364 34.30)",
+          "oklch(49.29% 0.01364 34.30)",
+          "oklch(60.71% 0.01364 34.30)",
+          "oklch(72.14% 0.01364 34.30)",
+          "oklch(83.57% 0.01364 34.30)",
+          "oklch(95% 0.01364 34.30)"
+        ]
+      },
+      "blue": {
+        "role": "secondary",
+        "displayName": "Slate Blue",
+        "tonalRamp": [
+          "oklch(15% 0.07490 246.74)",
+          "oklch(26.43% 0.07490 246.74)",
+          "oklch(37.86% 0.07490 246.74)",
+          "oklch(49.29% 0.07490 246.74)",
+          "oklch(60.71% 0.07490 246.74)",
+          "oklch(72.14% 0.07490 246.74)",
+          "oklch(83.57% 0.07490 246.74)",
+          "oklch(95% 0.07490 246.74)"
+        ]
+      },
+      "blue-soft": {
+        "role": "secondary",
+        "displayName": "Slate Blue Wash",
+        "tonalRamp": [
+          "oklch(15% 0.01030 247.93)",
+          "oklch(26.43% 0.01030 247.93)",
+          "oklch(37.86% 0.01030 247.93)",
+          "oklch(49.29% 0.01030 247.93)",
+          "oklch(60.71% 0.01030 247.93)",
+          "oklch(72.14% 0.01030 247.93)",
+          "oklch(83.57% 0.01030 247.93)",
+          "oklch(95% 0.01030 247.93)"
+        ]
+      },
+      "healthy": {
+        "role": "secondary",
+        "displayName": "Leaf Green",
+        "tonalRamp": [
+          "oklch(15% 0.07354 152.98)",
+          "oklch(26.43% 0.07354 152.98)",
+          "oklch(37.86% 0.07354 152.98)",
+          "oklch(49.29% 0.07354 152.98)",
+          "oklch(60.71% 0.07354 152.98)",
+          "oklch(72.14% 0.07354 152.98)",
+          "oklch(83.57% 0.07354 152.98)",
+          "oklch(95% 0.07354 152.98)"
+        ]
+      },
+      "healthy-soft": {
+        "role": "secondary",
+        "displayName": "Leaf Green Wash",
+        "tonalRamp": [
+          "oklch(15% 0.01329 152.60)",
+          "oklch(26.43% 0.01329 152.60)",
+          "oklch(37.86% 0.01329 152.60)",
+          "oklch(49.29% 0.01329 152.60)",
+          "oklch(60.71% 0.01329 152.60)",
+          "oklch(72.14% 0.01329 152.60)",
+          "oklch(83.57% 0.01329 152.60)",
+          "oklch(95% 0.01329 152.60)"
+        ]
+      },
+      "badge-neutral": {
+        "role": "neutral",
+        "displayName": "Neutral Status Ink",
+        "tonalRamp": [
+          "oklch(15% 0.02207 157.34)",
+          "oklch(26.43% 0.02207 157.34)",
+          "oklch(37.86% 0.02207 157.34)",
+          "oklch(49.29% 0.02207 157.34)",
+          "oklch(60.71% 0.02207 157.34)",
+          "oklch(72.14% 0.02207 157.34)",
+          "oklch(83.57% 0.02207 157.34)",
+          "oklch(95% 0.02207 157.34)"
+        ]
+      },
+      "badge-neutral-soft": {
+        "role": "neutral",
+        "displayName": "Neutral Status Wash",
+        "tonalRamp": [
+          "oklch(15% 0.00618 137.77)",
+          "oklch(26.43% 0.00618 137.77)",
+          "oklch(37.86% 0.00618 137.77)",
+          "oklch(49.29% 0.00618 137.77)",
+          "oklch(60.71% 0.00618 137.77)",
+          "oklch(72.14% 0.00618 137.77)",
+          "oklch(83.57% 0.00618 137.77)",
+          "oklch(95% 0.00618 137.77)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page title",
+        "purpose": "Balanced page titles. Uses 27px at the mobile breakpoint."
+      },
+      "headline": {
+        "displayName": "Section heading",
+        "purpose": "Primary content sections. Uses 16px inside mobile section headings."
+      },
+      "detail": {
+        "displayName": "Detail heading",
+        "purpose": "The selected display or system detail. Uses 21px at the mobile breakpoint."
+      },
+      "title": {
+        "displayName": "Panel heading",
+        "purpose": "Headings for related facts and supporting controls."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The base document text, with compact descriptive text where appropriate."
+      },
+      "label": {
+        "displayName": "Control label",
+        "purpose": "Compact button labels with enough weight to remain clear."
+      },
+      "metadata": {
+        "displayName": "Metadata",
+        "purpose": "Supporting captions, host names, and timestamps."
+      },
+      "metric": {
+        "displayName": "GPU metric",
+        "purpose": "Live GPU load and memory, using tabular numerals."
+      },
+      "log": {
+        "displayName": "Run output",
+        "purpose": "Preformatted, wrapping output in native run disclosures."
+      }
+    },
+    "shadows": [
+      {
+        "name": "toast",
+        "value": "0 10px 30px #25372f14",
+        "purpose": "Temporary feedback above the page."
+      },
+      {
+        "name": "device",
+        "value": "0 7px 20px #2f403325",
+        "purpose": "The physical calendar display frame."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "160ms ease-out",
+        "purpose": "Navigation color, button backgrounds and borders, and disclosure chevron rotation."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "none",
+        "purpose": "Disable transitions and animations, and use automatic scroll behavior when prefers-reduced-motion is reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide-min",
+        "value": "1600px"
+      },
+      {
+        "name": "compact-max",
+        "value": "1220px"
+      },
+      {
+        "name": "stack-max",
+        "value": "1000px"
+      },
+      {
+        "name": "mobile-max",
+        "value": "760px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main run or save action, with pending feedback on the live page.",
+      "html": "<button class=\"ds-button ds-primary ds-focus\" type=\"button\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m7 3 14 9-14 9Z\"/></svg><span>Run update</span></button>",
+      "css": ".ds-button{font-family:\"Inter\",sans-serif;display:inline-flex;justify-content:center;align-items:center;gap:8px;border:1px solid #d8e0d8;border-radius:7px;background:var(--panel,#fff);min-height:38px;padding:8px 13px;color:var(--ink,#25372f);font-size:12px;font-weight:550;line-height:1.5;white-space:nowrap;cursor:pointer;transition:background 160ms ease-out,border-color 160ms ease-out}.ds-button:hover{background:var(--soft,#f5f7f3);border-color:#a5b5aa}.ds-button:disabled{opacity:.55;cursor:wait}.ds-button .ds-icon{width:16px;height:16px}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-button,.ds-nav-link,.ds-chevron{transition:none}}.ds-primary{background:var(--green,#245648);border-color:var(--green,#245648);color:#fff}.ds-primary:hover{background:#183f33}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A routine action such as refreshing status.",
+      "html": "<button class=\"ds-button ds-focus\" type=\"button\" aria-label=\"Refresh status\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 7v5h-5M4 17v-5h5M5.5 8a7 7 0 0 1 11.8-3L20 8M4 16l2.7 3A7 7 0 0 0 18.5 16\"/></svg><span>Refresh status</span></button>",
+      "css": ".ds-button{font-family:\"Inter\",sans-serif;display:inline-flex;justify-content:center;align-items:center;gap:8px;border:1px solid #d8e0d8;border-radius:7px;background:var(--panel,#fff);min-height:38px;padding:8px 13px;color:var(--ink,#25372f);font-size:12px;font-weight:550;line-height:1.5;white-space:nowrap;cursor:pointer;transition:background 160ms ease-out,border-color 160ms ease-out}.ds-button:hover{background:var(--soft,#f5f7f3);border-color:#a5b5aa}.ds-button:disabled{opacity:.55;cursor:wait}.ds-button .ds-icon{width:16px;height:16px}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-button,.ds-nav-link,.ds-chevron{transition:none}}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "A supporting action beside the primary save control.",
+      "html": "<button class=\"ds-button ds-quiet ds-focus\" type=\"button\">Reload saved settings</button>",
+      "css": ".ds-button{font-family:\"Inter\",sans-serif;display:inline-flex;justify-content:center;align-items:center;gap:8px;border:1px solid #d8e0d8;border-radius:7px;background:var(--panel,#fff);min-height:38px;padding:8px 13px;color:var(--ink,#25372f);font-size:12px;font-weight:550;line-height:1.5;white-space:nowrap;cursor:pointer;transition:background 160ms ease-out,border-color 160ms ease-out}.ds-button:hover{background:var(--soft,#f5f7f3);border-color:#a5b5aa}.ds-button:disabled{opacity:.55;cursor:wait}.ds-button .ds-icon{width:16px;height:16px}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-button,.ds-nav-link,.ds-chevron{transition:none}}.ds-quiet{border-color:transparent;background:transparent;color:var(--muted,#64716a)}.ds-quiet:hover{background:var(--soft,#f5f7f3);color:var(--ink,#25372f)}"
+    },
+    {
+      "name": "Labeled Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A persistent label, native text field, and compact supporting instruction.",
+      "html": "<label class=\"ds-field\">Timezone<input class=\"ds-focus\" name=\"timezone\" value=\"America/Los_Angeles\" required><small>Daily updates follow midnight in this timezone, including daylight saving changes.</small></label>",
+      "css": ".ds-field{font-family:\"Inter\",sans-serif;display:flex;flex-direction:column;gap:7px;font-size:12px;line-height:1.5;color:var(--ink,#25372f);min-width:0}.ds-field input{font-family:\"Inter\",sans-serif;width:100%;border:1px solid #ced8ce;border-radius:7px;background:#fff;padding:10px 11px;min-height:40px;color:var(--ink,#25372f);font-size:13px;line-height:1.5;caret-color:var(--green,#245648);accent-color:var(--green,#245648)}.ds-field input:hover{border-color:#a0b3a3}.ds-field input::placeholder{color:var(--muted,#64716a);font-size:12px}.ds-field small{color:var(--muted,#64716a);font-size:11px}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}"
+    },
+    {
+      "name": "System Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Named destinations, an explicit current page, and an accessible health indicator.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Your systems\"><a class=\"ds-nav-link ds-active ds-focus\" href=\"/\" aria-current=\"page\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z\"/></svg><span>Overview</span></a><a class=\"ds-nav-link ds-focus\" href=\"/systems/gpu\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 3h18v7H3Zm0 11h18v7H3ZM7 6.5h.01M7 17.5h.01M12 6.5h5M12 17.5h5\"/></svg><span class=\"ds-nav-text\">Local GPU</span><span class=\"ds-nav-state\" aria-label=\"Healthy\" title=\"Healthy\"></span></a></nav>",
+      "css": ".ds-nav{font-family:\"Inter\",sans-serif;background:var(--rail,#f1f3ef);font-size:14px;line-height:1.5}.ds-nav-link{display:flex;align-items:center;gap:12px;min-height:46px;border-radius:8px;padding:11px 13px;color:#526158;font-weight:500;margin:4px 0;text-decoration:none;transition:background 160ms ease-out,color 160ms ease-out}.ds-nav-link:hover{background:#e7ebe4;color:var(--ink,#25372f)}.ds-nav-link.ds-active{background:var(--green-soft,#e3eee6);color:var(--green,#245648);font-weight:600}.ds-nav-link.ds-active .ds-icon{stroke-width:1.9}.ds-nav-text{flex:1}.ds-nav-state{width:6px;height:6px;border-radius:50%;background:#4f8b66;flex-shrink:0;margin-left:auto}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-button,.ds-nav-link,.ds-chevron{transition:none}}"
+    },
+    {
+      "name": "Status Badges",
+      "kind": "chip",
+      "refersTo": "badge-healthy",
+      "description": "Written states with restrained semantic color and a supporting dot.",
+      "html": "<div class=\"ds-badge-set\"><span class=\"ds-badge ds-healthy\"><span class=\"ds-dot\"></span>Healthy</span><span class=\"ds-badge ds-warning\"><span class=\"ds-dot\"></span>Needs attention</span><span class=\"ds-badge ds-error\"><span class=\"ds-dot\"></span>Unreachable</span><span class=\"ds-badge ds-running\"><span class=\"ds-dot\"></span>Updating</span><span class=\"ds-badge\"><span class=\"ds-dot\"></span>Quiet hours</span></div>",
+      "css": ".ds-badge{font-family:\"Inter\",sans-serif;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:550;line-height:1.5;white-space:nowrap;border-radius:5px;padding:4px 7px;background:#edf0ec;color:#5c6a61}.ds-dot{display:inline-block;flex-shrink:0;width:5px;height:5px;border-radius:100%;background:#8d9891}.ds-healthy{background:#eaf3ec;color:#386747}.ds-healthy .ds-dot{background:#4e8b67}.ds-warning{background:var(--amber-soft,#fbf3e7);color:var(--amber,#8d531a)}.ds-warning .ds-dot{background:#b77934}.ds-error{background:var(--red-soft,#faeeeb);color:var(--red,#a43f35)}.ds-error .ds-dot{background:var(--red,#a43f35)}.ds-running{background:var(--blue-soft,#edf3f9);color:var(--blue,#345d81)}.ds-running .ds-dot{background:var(--blue,#345d81)}.ds-badge-set{display:flex;gap:8px;flex-wrap:wrap}"
+    },
+    {
+      "name": "Fact Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "A coherent group of supporting settings or connection facts.",
+      "html": "<section class=\"ds-panel\"><h3>Daily monitoring</h3><dl class=\"ds-facts\"><div><dt>Checks</dt><dd>Every 5 minutes</dd></div><div><dt>Active hours</dt><dd>6 a.m. to 10 p.m.</dd></div><div><dt>Timezone</dt><dd>Pacific</dd></div></dl><p>The VM powers down overnight and catches up when monitoring resumes.</p></section>",
+      "css": ".ds-panel{font-family:\"Inter\",sans-serif;background:var(--panel,#fff);color:var(--ink,#25372f);border:1px solid var(--line,#dfe5de);border-radius:var(--radius,14px);padding:22px;line-height:1.5}.ds-panel h3{font-size:15px;font-weight:600;margin:0 0 6px}.ds-panel p{font-size:12px;margin:7px 0 0;color:var(--muted,#64716a);max-width:72ch}.ds-facts{margin:17px 0 0}.ds-facts>div{display:flex;justify-content:space-between;gap:24px;align-items:baseline;border-bottom:1px solid var(--line,#dfe5de);padding:11px 0;font-size:12px}.ds-facts>div:last-child{border-bottom:0}.ds-facts dt{color:var(--muted,#64716a);min-width:90px}.ds-facts dd{margin:0;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "System Row",
+      "kind": "custom",
+      "refersTo": "system-row",
+      "description": "A single linked system with host, current health, and a next action.",
+      "html": "<a class=\"ds-system-row ds-focus\" href=\"/systems/gpu\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 3h18v7H3Zm0 11h18v7H3ZM7 6.5h.01M7 17.5h.01M12 6.5h5M12 17.5h5\"/></svg><span><span class=\"ds-system-name\">Local GPU</span><span class=\"ds-system-caption\">Windows PC</span></span><span><span class=\"ds-badge ds-healthy\"><span class=\"ds-dot\"></span>Healthy</span></span><span class=\"ds-system-next\">Remote access<strong>Ollama · Tailscale</strong></span><span class=\"ds-row-arrow\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></span></a>",
+      "css": ".ds-system-row{font-family:\"Inter\",sans-serif;display:grid;grid-template-columns:34px minmax(140px,1.3fr) minmax(100px,.75fr) minmax(95px,.8fr) 16px;align-items:center;gap:12px;padding:20px 3px;border-bottom:1px solid var(--line,#dfe5de);color:var(--ink,#25372f);text-decoration:none;line-height:1.5}.ds-system-row:hover{background:var(--soft,#f5f7f3)}.ds-system-row>.ds-icon{color:#638171;width:23px;height:23px}.ds-system-name{font-size:13px;font-weight:600;display:block}.ds-system-caption{display:block;font-size:11px;color:var(--muted,#64716a);margin-top:3px}.ds-system-next{font-size:11px;color:var(--muted,#64716a)}.ds-system-next strong{font-weight:500;display:block;font-size:12px;color:var(--ink,#25372f);margin-top:2px}.ds-row-arrow{color:#8b9a90}@media(max-width:1220px){.ds-system-row{grid-template-columns:24px minmax(130px,1fr) 100px 14px;gap:10px}.ds-system-next{display:none}}@media(max-width:760px){.ds-system-row{padding:18px 1px;grid-template-columns:23px minmax(120px,1fr) 95px 12px;gap:9px}.ds-system-name{font-size:12px}.ds-system-caption{font-size:10px}.ds-system-row .ds-badge{font-size:10px;padding:4px 6px}}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-badge{font-family:\"Inter\",sans-serif;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:550;line-height:1.5;white-space:nowrap;border-radius:5px;padding:4px 7px;background:#edf0ec;color:#5c6a61}.ds-dot{display:inline-block;flex-shrink:0;width:5px;height:5px;border-radius:100%;background:#8d9891}.ds-healthy{background:#eaf3ec;color:#386747}.ds-healthy .ds-dot{background:#4e8b67}.ds-warning{background:var(--amber-soft,#fbf3e7);color:var(--amber,#8d531a)}.ds-warning .ds-dot{background:#b77934}.ds-error{background:var(--red-soft,#faeeeb);color:var(--red,#a43f35)}.ds-error .ds-dot{background:var(--red,#a43f35)}.ds-running{background:var(--blue-soft,#edf3f9);color:var(--blue,#345d81)}.ds-running .ds-dot{background:var(--blue,#345d81)}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}"
+    },
+    {
+      "name": "Run Disclosure",
+      "kind": "custom",
+      "refersTo": "activity-row",
+      "description": "Native disclosure preserves a readable summary while exposing run output on demand.",
+      "html": "<details class=\"ds-activity\"><summary class=\"ds-focus\"><span class=\"ds-run-dot\"></span><span class=\"ds-event-name\"><strong>Display update</strong><span class=\"ds-event-caption\">Success</span></span><time title=\"Oct 29, 6:00 PM\">Oct 29, 6:00 PM</time><svg class=\"ds-icon ds-chevron\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m9 5 7 7-7 7\"/></svg></summary><pre class=\"ds-log\">Update completed.</pre></details>",
+      "css": ".ds-activity{font-family:\"Inter\",sans-serif;border-bottom:1px solid var(--line,#dfe5de);color:var(--ink,#25372f);line-height:1.5}.ds-activity summary{list-style:none;display:flex;align-items:center;gap:12px;padding:13px 2px;cursor:pointer;font-size:12px}.ds-activity summary::-webkit-details-marker{display:none}.ds-activity summary:hover{background:var(--soft,#f5f7f3)}.ds-event-name{flex:1;min-width:0}.ds-event-name strong{font-size:12px;font-weight:500;display:block}.ds-event-caption{display:block;font-size:11px;color:var(--muted,#64716a);margin-top:3px}.ds-activity time{font-variant-numeric:tabular-nums;color:var(--muted,#64716a);font-size:11px}.ds-run-dot{display:inline-block;flex-shrink:0;width:7px;height:7px;border-radius:100%;background:#4e8b67}.ds-activity summary>.ds-icon{width:14px;height:14px;color:#839188;transition:transform 160ms ease-out}.ds-activity[open] summary>.ds-icon{transform:rotate(90deg)}.ds-log{white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.7 Consolas,monospace;background:#f0f3ee;padding:16px 18px;border-radius:7px;margin:0 0 14px;max-height:380px;overflow:auto;color:#435348}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-focus:focus-visible{outline:2px solid var(--focus,#3d7966);outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-button,.ds-nav-link,.ds-chevron{transition:none}}"
+    },
+    {
+      "name": "Health Summary",
+      "kind": "custom",
+      "refersTo": "health-summary",
+      "description": "A measured system state with an explicit check time and written status.",
+      "html": "<div class=\"ds-health\"><span class=\"ds-health-symbol\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Zm-4 9 3 3 5-6\"/></svg></span><div><strong>Ollama and Tailscale are ready</strong><p>Checked Oct 29, 10:33 PM Pacific</p></div><span class=\"ds-badge ds-healthy\"><span class=\"ds-dot\"></span>Healthy</span></div>",
+      "css": ".ds-health{font-family:\"Inter\",sans-serif;display:flex;gap:18px;align-items:center;padding:19px 22px;background:var(--soft,#f5f7f3);border:1px solid var(--line,#dfe5de);border-radius:var(--radius,14px);margin-bottom:28px;color:var(--ink,#25372f);line-height:1.5}.ds-health-symbol{color:var(--green,#245648);display:flex}.ds-health-symbol .ds-icon{width:29px;height:29px}.ds-health strong{font-size:15px;font-weight:600;display:block}.ds-health p{font-size:12px;margin:2px 0 0;color:var(--muted,#64716a);max-width:72ch}@media(max-width:760px){.ds-health{padding:17px;gap:13px;margin-bottom:25px}.ds-health strong{font-size:14px}.ds-health p{font-size:11px}}.ds-icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.ds-badge{font-family:\"Inter\",sans-serif;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:550;line-height:1.5;white-space:nowrap;border-radius:5px;padding:4px 7px;background:#edf0ec;color:#5c6a61}.ds-dot{display:inline-block;flex-shrink:0;width:5px;height:5px;border-radius:100%;background:#8d9891}.ds-healthy{background:#eaf3ec;color:#386747}.ds-healthy .ds-dot{background:#4e8b67}.ds-warning{background:var(--amber-soft,#fbf3e7);color:var(--amber,#8d531a)}.ds-warning .ds-dot{background:#b77934}.ds-error{background:var(--red-soft,#faeeeb);color:var(--red,#a43f35)}.ds-error .ds-dot{background:var(--red,#a43f35)}.ds-running{background:var(--blue-soft,#edf3f9);color:var(--blue,#345d81)}.ds-running .ds-dot{background:var(--blue,#345d81)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Household Service Book",
+    "overview": "RonHub uses warm white space, pale stone navigation, and deep evergreen controls to make household systems readable at a glance. The character is calm, compact, and practical. Clear names, aligned values, and short descriptions carry the interface.\n\nThe world is built from typography, thin rules, native SVG line icons, and restrained surfaces. Spacing separates tasks without turning every section into a card. Color points to a current location, a useful action, or a measured state. Controls and live information remain stable while someone reads, selects text, or edits settings.",
+    "keyCharacteristics": [
+      "Warm neutral surfaces with evergreen navigation and actions.",
+      "Compact Inter typography with tabular timestamps and measurements.",
+      "Open lists for systems and activity, bordered panels for related facts.",
+      "Written status, visible freshness, and specific recovery actions.",
+      "Stable interaction during automatic status refreshes."
+    ],
+    "rules": [
+      {
+        "name": "The Written Status Rule",
+        "body": "Pair every status color with a readable state or an accessible label. Distinguish healthy, needs attention, unreachable, unverified, paused, quiet hours, and updating.",
+        "section": "colors"
+      },
+      {
+        "name": "The Aligned Evidence Rule",
+        "body": "Use tabular numerals for measurements, fact values, and timestamps. Keep monospace reserved for run output.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Depth Rule",
+        "body": "Use borders and tone for ordinary information. Reserve diffuse shadows for temporary feedback and the calendar device frame.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the current CSS values and semantic roles in the frontmatter when extending the interface.",
+      "Do pair status color with words, include freshness, and give failures a relevant next action.",
+      "Do keep system names, timestamps, and fact values aligned across all five system pages.",
+      "Do retain keyboard focus, selected text, form edits, open run output, and scroll position during background refreshes.",
+      "Do use the self-hosted Inter face, tabular evidence, and native SVG icons.",
+      "Do preserve the calendar controller's live image and provide its event information as text.",
+      "Do honor reduced motion and use semantic links, buttons, labels, and disclosures.",
+      "Do write direct interface copy using commas, periods, colons, parentheses, or hyphens."
+    ],
+    "donts": [
+      "Don't infer health from a rendered page, hide missing evidence behind a healthy badge, or present an expired retry as a future action.",
+      "Don't replace focused controls or selected content during automatic refreshes.",
+      "Don't turn every list row or section into a shadowed card.",
+      "Don't use color or an unlabeled icon as the only explanation of a state or command.",
+      "Don't use decorative imagery to replace operational evidence.",
+      "Don't use em dashes in interface copy or documentation."
+    ]
+  }
+}

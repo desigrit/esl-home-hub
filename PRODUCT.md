@@ -42,3 +42,17 @@ ESL Hub is a private, self-hosted dashboard that turns household data into glanc
 
 - Select the first Microsoft To Do tag layout from the proposed display concepts.
 - Add the new physical display tag ID.
+
+## RonHub management scope
+
+The homepage prioritizes quick health checks and fixing failures across five
+systems: ESL Home Hub, the Zectrix Note 4C Family Calendar, Insignia Facebook
+Notifications, Reddit Unban, and Shambu Local GPU access over Tailscale.
+The Pi remains authoritative for the live deployment. Calendar control is a
+separate Pi service; Insignia runs in Azure; Reddit and GPU telemetry arrive
+through the Windows status bridge. Existing schedules and controller behavior
+are preserved. Future systems join through a shared registry and status adapter.
+
+The interface uses explicit status labels and observation times. Stale telemetry,
+failed work, paused schedules, and quiet hours are separate states. The layout
+adapts to desktop and mobile while keeping controls and active selections stable.

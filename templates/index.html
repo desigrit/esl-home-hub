@@ -50,9 +50,9 @@
 <body>
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <h1 class="h2">ESL Hub</h1>
-        <span class="badge bg-secondary badge-gateway">Gateway: {{ config.system.gateway_ip }}</span>
+        <div class="d-flex align-items-center flex-wrap gap-3"><span class="badge bg-secondary badge-gateway">Gateway: {{ config.system.gateway_ip }}</span></div>
     </div>
 
     <p id="connection-status" class="text-warning" role="status" hidden></p>
@@ -64,12 +64,14 @@
             <li class="nav-item" role="presentation"><button class="nav-link" id="energy-tab" data-bs-toggle="tab" data-bs-target="#energy" type="button" role="tab" aria-controls="energy" aria-selected="false">Energy</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="f1-tab" data-bs-toggle="tab" data-bs-target="#f1" type="button" role="tab" aria-controls="f1" aria-selected="false">Formula 1</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="family-tab" data-bs-toggle="tab" data-bs-target="#family" type="button" role="tab" aria-controls="family" aria-selected="false">Family Calendar</button></li>
+            <li class="nav-item" role="presentation"><button class="nav-link" id="note4-tab" data-bs-toggle="tab" data-bs-target="#note4" type="button" role="tab" aria-controls="note4" aria-selected="false">Family Calendar - Note4</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="todo-tab" data-bs-toggle="tab" data-bs-target="#todo" type="button" role="tab" aria-controls="todo" aria-selected="false">To Do</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="WebScraper-tab" data-bs-toggle="tab" data-bs-target="#WebScraper" type="button" role="tab" aria-controls="WebScraper" aria-selected="false">Mercedes</button></li>
             <li class="nav-item" role="presentation"><button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" role="tab" aria-controls="system" aria-selected="false">System</button></li>
         </ul>
 
         <div class="tab-content">
+            {% include '_note4_panel.html' %}
             
             {# --- MACRO: SCHEDULER --- #}
             {% macro scheduler_ui(key) %}
@@ -478,7 +480,7 @@
 
         function syncActiveTab(target) {
             const todoIsActive = target === '#todo';
-            configurationActions.hidden = todoIsActive;
+            configurationActions.hidden = todoIsActive || target === '#note4';
             if (todoIsActive) {
                 loadTodo(forceInitialTodoRefresh);
                 forceInitialTodoRefresh = false;
@@ -539,5 +541,6 @@
         }
     });
 </script>
+<script src="{{ url_for('static', filename='js/note4-tab.js') }}" defer></script>
 </body>
 </html>

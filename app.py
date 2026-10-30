@@ -22,6 +22,8 @@ from todo_service import (
 )
 
 app = Flask(__name__)
+from esl_note_proxy import register_note_controller
+register_note_controller(app)
 CONFIG_FILE = CONFIG_PATH
 LOG_FILE = ROOT / 'logs.json'
 _job_locks = {name: threading.Lock() for name in ('dota', 'weather', 'fitness', 'energy', 'f1', 'family', 'todo', 'WebScraper')}
@@ -474,6 +476,8 @@ def healthz():
         return no_store_json({'status': 'invalid_runtime_state'}, 503)
 
 if __name__ == '__main__':
+    from ronhub import install
+    install(app, globals())
     if os.environ.get('ESL_HUB_DISABLE_SCHEDULER') != '1':
         reschedule_all()
         scheduler.start()

@@ -8,7 +8,8 @@ esl_hub_backup_*.tar.gz
 *.log
 controllers/data/
 controllers/test_data.json
-.impeccable/
+.impeccable/*
+!.impeccable/design.json
 
 # Local safety backups (may contain credentials)
 *.bak-*
@@ -16,3 +17,6 @@ controllers/test_data.json
 *.lock
 .venv/
 .pytest_cache/
+.runtime/
+.private/
+.playwright-mcp/
