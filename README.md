@@ -10,11 +10,15 @@ I wanted that same quiet, always-visible information at home: no glow, notificat
 
 ## RonHub management
 
-The Pi's website now brings five systems into one interface: ESL Home Hub,
+The Pi's website brings six systems into one interface: Zebby, ESL Home Hub,
 Family Calendar on the Zectrix Note 4C, Insignia Facebook Notifications,
 Reddit Unban, and Local GPU through Shambu and Tailscale. The overview shows
 Pi health and actionable failures; each system has its own settings and evidence.
 ESL displays have individual tabs for activity, schedules, and controls.
+
+Zebby's tab checks the Azure credit service, Stripe and Supabase, with successful
+purchase counts and a daily chart for the last 7, 30 or 90 days. Checks run every
+minute on the Pi, even when no browser is open.
 
 The new interface is at `/`, with the previous dashboard preserved at `/legacy`.
 See the [RonHub setup and integration guide](docs/ronhub.md) for the Windows

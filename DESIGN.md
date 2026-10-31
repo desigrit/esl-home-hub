@@ -354,3 +354,13 @@ Motion stays limited to state feedback: background and color transitions, plus a
 - Don't use color or an unlabeled icon as the only explanation of a state or command.
 - Don't use decorative imagery to replace operational evidence.
 - Don't use em dashes in interface copy or documentation.
+
+## Zebby
+
+Zebby reuses RonHub's warm neutral surfaces, evergreen accents, Inter typography, and tabular measurements. Shared page headings, buttons, written status badges, inline metrics, panels, notices, empty states, and external links retain their established treatments. Service health occupies three open columns above the purchase totals and graph.
+
+The daily purchase graph defaults to 30 days, with 7, 30, and 90-day range buttons that expose their selected state. Dates and successful purchase counts are available through hover, keyboard focus, and accessible labels. The graph has one Tab stop; arrow keys move between dates and Home or End reaches either endpoint. Changing the range returns focus to its button. Bars use the existing evergreen and neutral colors; their rounded tops (3px) are chart geometry. Reduced motion removes the bar transition.
+
+At widths of 650px or less, service summaries stack with dividing rules, metrics wrap with the latest purchase on its own row, and range controls sit below the graph heading. The shorter graph and stacked footer links fit the narrow layout.
+
+Stale history retains the last purchase totals and graph with an amber notice naming their observation time. Missing history shows the shared unavailable state. A valid period with zero purchases retains the graph and says "No purchases in this period." Each service keeps its own written health status and check time.

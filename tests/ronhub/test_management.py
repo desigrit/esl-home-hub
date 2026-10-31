@@ -101,7 +101,7 @@ def test_live_gpu_zero_is_preserved(app):
 @pytest.mark.parametrize('host_state', ['warning', 'unknown'])
 def test_host_issue_is_visible_with_all_systems_healthy(app, monkeypatch, host_state):
     svc = app.extensions['ronhub']
-    for name in ('esl', 'calendar', 'insignia', 'reddit', 'gpu'):
+    for name in ('esl', 'calendar', 'insignia', 'reddit', 'gpu', 'zebby'):
         monkeypatch.setattr(svc, name, lambda: {'status': 'healthy', 'summary': 'Ready'})
     monkeypatch.setattr('ronhub.service.host_status', lambda: {'status': host_state, 'summary': 'Check host telemetry'})
     snapshot = svc.snapshot()

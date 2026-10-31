@@ -76,6 +76,17 @@ def install(app, runtime=None, config=None):
     def state():
         return jsonify(service.snapshot(force=request.args.get('refresh') == '1'))
 
+    @hub.post('/hub/api/zebby/refresh')
+    def zebby_refresh():
+        from .zebby_status import start_refresh
+        start_refresh(config.get('zebby', {}), state_dir)
+        service.cached_at = 0
+        return jsonify(ok=True), 202
+
+    @hub.get('/hub/api/zebby')
+    def zebby_status():
+        return jsonify(service.zebby())
+
     @hub.get('/hub/api/settings/<job>')
     def settings(job):
         fields_for(job)

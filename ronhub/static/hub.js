@@ -4,6 +4,7 @@
   const $$ = (q, el = document) => [...el.querySelectorAll(q)];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const paths = {
+    briefcase:'M8 6V4h8v2M3 7h18v14H3Zm0 6c6 3 12 3 18 0M10 13h4v4h-4Z',
     home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
     display:'M4 4h16v12H4zM8 21h8m-4-5v5',
     calendar:'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm2-3v6m10-6v6M3 11h18m-14 4h2m6 0h2m-10 3h2',
@@ -47,6 +48,7 @@
   const main = $('#main');
   const csrf = $('meta[name="hub-csrf"]').content;
   let failures = 0;
+  let zebbyDays = 30;
 
   async function api(path, options = {}) {
     const abort = new AbortController();
@@ -67,6 +69,23 @@
     const el = $('#toast');
     el.textContent = message; el.className = `toast${error ? ' error' : ''}`; el.hidden = false;
     noticeTimer = setTimeout(() => { el.hidden = true; }, error ? 10000 : 5000);
+  }
+
+  function zebbyChart(transactions) {
+    const days = transactions.days.slice(-zebbyDays);
+    const total = days.reduce((sum, day) => sum + day.count, 0);
+    const maximum = Math.max(2, ...days.map(day => day.count));
+    const ceiling = maximum % 2 ? maximum + 1 : maximum;
+    const dayLabel = date => new Intl.DateTimeFormat('en-US', {timeZone:'UTC',month:'short',day:'numeric'}).format(new Date(date + 'T12:00:00Z'));
+    return `<section class="panel zebby-transactions" aria-labelledby="zebby-chart-title"><div class="section-heading"><div><h2 id="zebby-chart-title">Transactions</h2><p>${total.toLocaleString()} successful ${total===1?'purchase':'purchases'} in ${zebbyDays} days</p></div><div class="zebby-ranges" role="group" aria-label="Transaction date range">${[7,30,90].map(days=>`<button type="button" data-zebby-range="${days}" aria-pressed="${days===zebbyDays}">${days} days</button>`).join('')}</div></div><div class="zebby-chart"><div class="zebby-scale" aria-hidden="true"><span>${ceiling}</span><span>${ceiling/2}</span><span>0</span></div><div class="zebby-plot"><div class="zebby-grid" aria-hidden="true"><span></span><span></span><span></span></div><div class="zebby-bars" role="group" aria-label="Purchases by day. Use arrow keys to move between dates.">${days.map((day,index)=>`<button type="button" class="zebby-day${day.count?' has-purchases':''}" tabindex="${index===days.length-1?'0':'-1'}" aria-label="${esc(dayLabel(day.date))}: ${day.count} ${day.count===1?'purchase':'purchases'}" style="--bar-height:${day.count/ceiling*100}%"><span class="zebby-bar"></span><span class="zebby-tip" aria-hidden="true">${esc(dayLabel(day.date))}<strong>${day.count} ${day.count===1?'purchase':'purchases'}</strong></span></button>`).join('')}</div>${total===0?'<div class="zebby-no-purchases">No purchases in this period</div>':''}</div></div><div class="zebby-chart-axis" aria-hidden="true"><span>${esc(dayLabel(days[0].date))}</span><span>${esc(dayLabel(days[Math.floor(days.length/2)].date))}</span><span>${esc(dayLabel(days.at(-1).date))}</span></div><p class="page-footnote">Successful credit purchases · Pacific time</p></section>`;
+  }
+
+  function zebbyPage() {
+    const s = sys('zebby'), data = s.data || {}, transactions = data.transactions;
+    const services = data.services || [];
+    const refreshing = pending.has('zebby-refresh');
+    const period = transactions?.days.slice(-zebbyDays).reduce((total, day) => total + day.count, 0);
+    return heading('Zebby','Service health and credit purchases.',button(refreshing?'Checking...':'Refresh status','zebby-refresh',false,refreshing?'disabled aria-busy="true"':'')) + `<div class="zebby-services" aria-label="Service health">${services.map(service=>`<section class="zebby-service"><div class="zebby-service-title"><h2>${esc(service.name)}</h2>${badge(service.status)}</div><p>${esc(service.detail)}</p><div class="zebby-service-meta"><span>${service.latency_ms!=null&&service.status==='healthy'?esc(service.latency_ms)+' ms':'Check connection'}</span><time>${esc(service.checked_at?relative(service.checked_at):'Not checked')}</time></div></section>`).join('')}</div>${transactions?`<div class="metric-inline zebby-metrics"><div><span>All-time purchases</span><strong>${transactions.total.toLocaleString()}</strong></div><div><span>Last ${zebbyDays} days</span><strong>${period.toLocaleString()}</strong></div><div><span>Latest purchase</span><strong class="zebby-last-purchase">${transactions.last_payment_at?esc(fmt(transactions.last_payment_at)):'None yet'}</strong></div></div>${data.transactions_stale?`<div class="notice" role="status">Showing purchase totals from ${esc(fmt(transactions.checked_at))}. Waiting for a fresh check.</div>`:''}${zebbyChart(transactions)}`:`<section class="section-space">${empty('Transaction history unavailable','The next successful database check will load your purchase totals.')}</section>`}<div class="zebby-bottom"><p class="page-footnote">${esc(s.checked_at?'Checked '+fmt(s.checked_at):'Waiting for the first check')} · Updates every minute</p><div class="external-links">${link('https://portal.azure.com/','Azure',true)}${link('https://dashboard.stripe.com/payments','Stripe payments',true)}${link('https://supabase.com/dashboard','Supabase',true)}</div></div>`;
   }
 
   function currentRoute() {
@@ -193,7 +212,7 @@
     routeKey=newKey;
     pageVersion++;
     const scrollY=window.scrollY;
-    main.innerHTML=route.system==='overview'?overview():route.system==='esl'?eslPage(route):route.system==='calendar'?calendarPage(route):route.system==='insignia'?insigniaPage():route.system==='reddit'?redditPage():route.system==='gpu'?gpuPage():route.system==='settings'?hubSettings():empty('System not found','Choose a system in the navigation.');
+    main.innerHTML=route.system==='overview'?overview():route.system==='zebby'?zebbyPage():route.system==='esl'?eslPage(route):route.system==='calendar'?calendarPage(route):route.system==='insignia'?insigniaPage():route.system==='reddit'?redditPage():route.system==='gpu'?gpuPage():route.system==='settings'?hubSettings():empty('System not found','Choose a system in the navigation.');
     $$('details[data-detail]',main).forEach(d=>{if(open.has(d.dataset.detail))d.open=true;});
     main.setAttribute('aria-busy','false');
     if($('#settings-container')) loadSettings($('#settings-container').dataset.job,pageVersion);
@@ -279,6 +298,47 @@
       try{await api('/hub/api/insignia/'+(action.endsWith('pause')?'pause':'resume'),{method:'POST'});toast(action.endsWith('pause')?'Scheduled checks paused.':'Scheduled checks resumed.');await refresh(true);}
       catch(error){toast(error.message,true);}finally{if(b.isConnected)b.disabled=false;}
     }
+  });
+  document.addEventListener('click',async event=>{
+    const range = event.target.closest('[data-zebby-range]');
+    if(range){zebbyDays=Number(range.dataset.zebbyRange);render(true);$(`[data-zebby-range="${zebbyDays}"]`)?.focus();return;}
+    const refreshControl = event.target.closest('[data-action="zebby-refresh"]');
+    if(!refreshControl)return;
+    if(pending.has('zebby-refresh'))return;
+    pending.add('zebby-refresh');
+    refreshControl.disabled=true;
+    refreshControl.setAttribute('aria-busy','true');
+    refreshControl.lastChild.textContent='Checking...';
+    const previous=sys('zebby')?.checked_at;
+    try{
+      await api('/hub/api/zebby/refresh',{method:'POST'});
+      for(let attempt=0;attempt<20;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,2000));
+        const result=await api('/hub/api/zebby');
+        if(result.checked_at&&result.checked_at!==previous){
+          state.systems=state.systems.map(item=>item.id==='zebby'?{...item,...result}:item);
+          toast('Zebby status refreshed.');
+          break;
+        }
+        if(attempt===19)throw new Error('The check is taking longer than expected. It will update automatically.');
+      }
+    }
+    catch(error){toast(error.message,true);}
+    finally{
+      pending.delete('zebby-refresh');
+      if(currentRoute().system==='zebby'){
+        const restoreFocus=refreshControl===document.activeElement;
+        render(true);
+        if(restoreFocus)$('[data-action="zebby-refresh"]')?.focus();
+      }else syncChrome();
+    }
+  });
+  document.addEventListener('keydown',event=>{
+    const day=event.target.closest('.zebby-day');
+    if(!day||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    const days=$$('.zebby-day'),index=days.indexOf(day);
+    const next=event.key==='Home'?0:event.key==='End'?days.length-1:Math.max(0,Math.min(days.length-1,index+(event.key==='ArrowRight'?1:-1)));
+    event.preventDefault();days.forEach((item,i)=>item.tabIndex=i===next?0:-1);days[next].focus();
   });
   document.addEventListener('input',event=>{if(event.target.closest('#settings-form,#calendar-form'))dirty=true;});
   document.addEventListener('change',event=>{if(event.target.name==='mode')syncSchedule();});

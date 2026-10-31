@@ -68,6 +68,10 @@ class HubService:
         self.external = None
         self.external_at = 0
 
+    def zebby(self):
+        from .zebby_status import status
+        return status(self.state_dir)
+
     def esl(self):
         data = self.backend.status()
         jobs = []
@@ -199,7 +203,7 @@ class HubService:
         with self.lock:
             if self.cached is not None and not force and time.monotonic() - self.cached_at < 12:
                 return self.cached
-            adapters = {'esl': self.esl, 'calendar': self.calendar, 'insignia': self.insignia, 'reddit': self.reddit, 'gpu': self.gpu}
+            adapters = {'esl': self.esl, 'calendar': self.calendar, 'insignia': self.insignia, 'reddit': self.reddit, 'gpu': self.gpu, 'zebby': self.zebby}
             futures = {key: self.pool.submit(fn) for key, fn in adapters.items()}
             host_future = self.pool.submit(host_status)
             systems, issues, activity = [], [], []

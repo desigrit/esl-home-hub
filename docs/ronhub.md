@@ -1,9 +1,10 @@
 # RonHub
 
-Home automation management at [ronhub.local:5000](http://ronhub.local:5000/), with a shared health overview and five system pages.
+Home automation management at [ronhub.local:5000](http://ronhub.local:5000/), with a shared health overview and six system pages.
 
 | System | Controls and evidence |
 | --- | --- |
+| Zebby | Azure, Stripe and Supabase checks, successful purchase totals, daily transaction chart |
 | ESL Home Hub | Eight display tabs, run history, individual settings and schedules, manual updates, Microsoft To Do lists, gateway settings |
 | Family Calendar | Zectrix Note 4C preview, events, refresh, calendar settings, existing device and Google connection controls |
 | Insignia Facebook Notifications | Azure monitor status, last completed scan, failures, notification queue, timer pause/resume when connected |
@@ -11,6 +12,9 @@ Home automation management at [ronhub.local:5000](http://ronhub.local:5000/), wi
 | Local GPU | Shambu host health, GPU load and VRAM, Ollama and Tailscale checks, installed models, observed activity |
 
 The overview distinguishes failed work, missing evidence, paused schedules, sleeping devices, and stale reports. Raspberry Pi telemetry includes CPU, memory, storage, temperature, uptime, and required service status. Browser status updates every 20 seconds; the GPU page requests readings every five seconds. Polling preserves active controls and selections.
+
+See [Zebby status](zebby-status.md) for the restricted cloud reader, transaction
+counting rules and minute-by-minute collection.
 
 ## Architecture
 
@@ -57,7 +61,7 @@ sudo systemctl restart esl_hub
 
 The installer verifies the reviewed app hash, refuses to deploy while an ESL update is running, compiles the source, backs up the app and prior module, and inserts the module hook before scheduler startup. Its output identifies the backup directory under `.runtime/ronhub/backups/`. It leaves controller configuration, task history, device pairing, and existing templates intact.
 
-After restart, verify `/healthz`, `/hub/api/state`, all five system pages, `/note/`, `/hub/api/todo-panel`, and the saved display settings. Compare enabled schedules and next-run timestamps to `schedule-before.json` in the backup.
+After restart, verify `/healthz`, `/hub/api/state`, all system pages, `/note/`, `/hub/api/todo-panel`, and the saved display settings. Compare enabled schedules and next-run timestamps to `schedule-before.json` in the backup.
 
 To restore the previous dashboard, copy `app.py` from the chosen backup to `/home/ronhub/esl_hub/app.py`, then restart `esl_hub`. For a later module upgrade, also restore that backup's `ronhub/` directory. Keep the runtime state directory in place.
 

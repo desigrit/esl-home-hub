@@ -1,5 +1,6 @@
 """System metadata and editable settings. Add systems here and a status adapter."""
 SYSTEMS = [
+    dict(id='zebby', name='Zebby', description='Service health and credit purchases.', host='Azure VM', icon='briefcase', path='/systems/zebby', repository='https://github.com/desigrit/zebby-the-scout'),
     dict(id='esl', name='ESL Home Hub', description='Your household, at a glance.', host='Raspberry Pi', icon='display', path='/systems/esl', repository='https://github.com/desigrit/esl-home-hub'),
     dict(id='calendar', name='Family Calendar', description='Zectrix Note 4C', host='Raspberry Pi', icon='calendar', path='/systems/calendar', repository='https://github.com/desigrit/zectrix'),
     dict(id='insignia', name='Insignia Facebook Notifications', description='New posts from your community.', host='Azure VM', icon='bell', path='/systems/insignia', repository='https://github.com/desigrit/facebook-notifications-engine'),

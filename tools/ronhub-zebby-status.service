@@ -1,0 +1,17 @@
+[Unit]
+Description=Read Zebby service health and purchase totals
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ronhub
+WorkingDirectory=/home/ronhub/esl_hub
+ExecStart=/usr/bin/python3 -m ronhub.zebby_status --state-dir /home/ronhub/esl_hub/.runtime/ronhub
+TimeoutStartSec=45
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ronhub/esl_hub/.runtime/ronhub
+UMask=0077
